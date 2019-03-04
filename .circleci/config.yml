@@ -22,12 +22,12 @@ jobs:
           name: Build PDF
           command: npm run pdf
       - store_artifacts:
-          path: ./articles/WebAuthn-Tech-Book.pdf
+          path: ./articles/WebAuthn-Tech-Book2.pdf
       - save_cache:
           key: article-{{ .Revision }}
           paths:
-            - ./articles/WebAuthn-Tech-Book.pdf
-          destination: WebAuthn-Tech-Book.pdf
+            - ./articles/WebAuthn-Tech-Book2.pdf
+          destination: WebAuthn-Tech-Book2.pdf
 
   upload:
     docker:
@@ -45,7 +45,7 @@ jobs:
           command: |
             # 環境変数から認証情報を取得してJSONファイルに出力
             echo $GDRIVE_CREDENTIAL | base64 -d > credential.json
-            gdrive --config $(pwd) --service-account credential.json update $GDRIVE_FILE_ID /root/project/articles/WebAuthn-Tech-Book.pdf
+            gdrive --config $(pwd) --service-account credential.json update $GDRIVE_FILE_ID /root/project/articles/WebAuthn-Tech-Book2.pdf
             
 workflows:
   version: 2
