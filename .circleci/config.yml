@@ -1,0 +1,62 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: vvakame/review:2.4
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - npm-cache-{{ checksum "package-lock.json" }}
+      - run:
+          name: Setup
+          command: npm install
+      - save_cache:
+          key: npm-cache-{{ checksum "package-lock.json" }}
+          paths:
+            - ./node_modules
+      - run:
+          name: Test
+          command: npm test
+      - run:
+          name: Build PDF
+          command: npm run pdf
+      - store_artifacts:
+          path: ./articles/WebAuthn-Tech-Book.pdf
+      - save_cache:
+          key: article-{{ .Revision }}
+          paths:
+            - ./articles/WebAuthn-Tech-Book.pdf
+          destination: WebAuthn-Tech-Book.pdf
+
+  upload:
+    docker:
+      # gdriveをソースからコンパイルするのでgolang環境が必要
+      - image: golang
+    working_directory: ~/wd
+    steps:
+      - restore_cache:
+          keys:
+            - article-{{ .Revision }}
+      # gdriveをインストール
+      - run: go get github.com/prasmussen/gdrive
+      - deploy:
+          name: Upload
+          command: |
+            # 環境変数から認証情報を取得してJSONファイルに出力
+            echo $GDRIVE_CREDENTIAL | base64 -d > credential.json
+            gdrive --config $(pwd) --service-account credential.json update $GDRIVE_FILE_ID /root/project/articles/WebAuthn-Tech-Book.pdf
+            
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - build
+      - upload:
+          requires:
+            - build   
+          filters:
+            branches:
+              only: master
+
+      

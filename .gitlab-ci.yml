@@ -1,0 +1,13 @@
+image: vvakame/review:2.4
+
+build-pdf:
+  script: # build-in-docker.sh の終盤と同じもの
+    - ./setup.sh
+    - npm run pdf
+  artifacts:
+    paths:
+      - articles/WebAuthn-Tech-Book.pdf
+
+
+# 文法はこちらを参照してください
+# https://docs.gitlab.com/ce/ci/yaml/README.html

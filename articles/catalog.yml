@@ -1,0 +1,15 @@
+PREDEF:
+  - preface.re
+
+# 順番は考える
+CHAPS:
+  - watahani.re
+  - corocn.re
+  - ken5scal.re
+  - shiroica.re
+  - super_reader.re
+
+APPENDIX:
+
+POSTDEF:
+  - contributors.re
