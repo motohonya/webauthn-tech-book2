@@ -25,7 +25,7 @@ jobs:
           name: Concat pdf
           command: |
             apt-get install -y xpdf
-            pdfunite ./articles/*.pdf ./dist/WebAuthn-Tech-Book2.pdf
+            pdfunite ./articles/top_cover.pdf ./articles/WebAuthn-Tech-Book2.pdf ./dist/WebAuthn-Tech-Book2.pdf
       - store_artifacts:
           path: ./dist/WebAuthn-Tech-Book2.pdf
       - save_cache:
