@@ -21,12 +21,17 @@ jobs:
       - run:
           name: Build PDF
           command: npm run pdf
+      - run:
+          name: Concat pdf
+          command: |
+            apt-get install -y xpdf
+            pdfunite ./articles/*.pdf ./dist/WebAuthn-Tech-Book2.pdf
       - store_artifacts:
-          path: ./articles/WebAuthn-Tech-Book2.pdf
+          path: ./dist/WebAuthn-Tech-Book2.pdf
       - save_cache:
           key: article-{{ .Revision }}
           paths:
-            - ./articles/WebAuthn-Tech-Book2.pdf
+            - ./dist/WebAuthn-Tech-Book2.pdf
           destination: WebAuthn-Tech-Book2.pdf
 
   upload:
@@ -45,7 +50,7 @@ jobs:
           command: |
             # 環境変数から認証情報を取得してJSONファイルに出力
             echo $GDRIVE_CREDENTIAL | base64 -d > credential.json
-            gdrive --config $(pwd) --service-account credential.json update $GDRIVE_FILE_ID /root/project/articles/WebAuthn-Tech-Book2.pdf
+            gdrive --config $(pwd) --service-account credential.json update $GDRIVE_FILE_ID /root/project/dist/WebAuthn-Tech-Book2.pdf
             
 workflows:
   version: 2
