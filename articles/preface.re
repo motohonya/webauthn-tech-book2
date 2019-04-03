@@ -1,5 +1,10 @@
 = はじめに
 
+2019/03/04 に W3C が WebAuthn が @<href>(https://www.w3.org/TR/2019/REC-webauthn-1-20190304/,W3C 勧告) になったことを発表しました。
+また 2/25 には Android が FIDO2 Certificate を取得し、昨年に引き続きプラットフォームとブラウザーの対応が加速しています。
+
+今回は前回の技術書典5で知り合った WebAuthn オタクたちを集めて、濃い内容でコラムを書いてもらうことにしました。
+
 == お問い合わせ先
 
 本書に関するお問い合わせ： twitter @<href>{https://twitter.com/watahani,@watahani}
