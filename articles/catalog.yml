@@ -5,7 +5,6 @@ PREDEF:
 CHAPS:
   - watahani.re
   - corocn.re
-  - ken5scal.re
   - webauthn-lib-responsibility.re
   - super_reader.re
 

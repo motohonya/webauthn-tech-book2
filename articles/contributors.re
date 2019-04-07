@@ -17,8 +17,6 @@
 
 //footnote[webauthn4j][https://github.com/webauthn4j/webauthn4j]
 
-==== @ken5scal
-
 ==== @super_reader
 
 ==== @corocn
