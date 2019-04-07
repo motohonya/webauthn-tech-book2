@@ -118,9 +118,9 @@ Authenticator のバックアップが難しいことが分かったところで
 
 HD ウォレットは BIP0032@<fn>{BIP0031} で定義されているビットコインのウォレット管理プロトコルです。
 HD ウォレットは Hierarchical Deterministic（階層的決定性）ウォレットの略で、ひとつのシードから複数の秘密鍵を作成できるのですが、階層的決定性とあるように階層的に秘密鍵を生成できます。
-また、同じシードからは同じ秘密鍵の階層を作成可能です。
+@<img>{w-hd} にあるようにマスターキーを m として、m の子 m/x, またその子 m/x/y のように階層的に秘密鍵を作成できます。@<fn>{hierarchical}また、同じシードからは同じ秘密鍵の階層を作成可能です。
 
-//image[w-hd][階層的な鍵生成@<fn>{hierarchical}] 
+//image[w-hd][階層的な鍵生成] 
 
 
 //footnote[BIP0031][https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki]
