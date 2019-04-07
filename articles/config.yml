@@ -177,10 +177,10 @@ colophon: true
 # font_ext: ["ttf", "woff", "otf"]
 
 # ソースコードハイライトを利用する (pygmentsには外部gemが必要)
-# highlight:
-#   html: "rouge"
-#   html: "pygments"
-#   latex: "listings"
+highlight:
+  html: "rouge"
+  # html: "pygments"
+  latex: "listings"
 
 # カタログファイル名を指定する
 # catalogfile: catalog.yml

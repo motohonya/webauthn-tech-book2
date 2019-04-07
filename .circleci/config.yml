@@ -26,6 +26,9 @@ jobs:
           command: |
             apt-get install -y pdftk
             pdftk ./top_cover.pdf ./articles/WebAuthn-Tech-Book2.pdf cat output ./dist/WebAuthn-Tech-Book2.pdf
+      - run:
+          name: upload article to slack
+          command: if [ -v SLACK_TOKEN ] ; then curl https://slack.com/api/files.upload -F token="${SLACK_TOKEN}" -F channels="${SLACK_CHANNEL}" -F title="${CIRCLE_BRANCH}-${CIRCLE_SHA1}" -F filename="${CIRCLE_BRANCH}-${CIRCLE_SHA1}" -F file=@"./dist/WebAuthn-Tech-Book2.pdf"; fi;
       - store_artifacts:
           path: ./dist/WebAuthn-Tech-Book2.pdf
       - save_cache:
@@ -51,7 +54,7 @@ jobs:
             # 環境変数から認証情報を取得してJSONファイルに出力
             echo $GDRIVE_CREDENTIAL | base64 -d > credential.json
             gdrive --config $(pwd) --service-account credential.json update $GDRIVE_FILE_ID /root/project/dist/WebAuthn-Tech-Book2.pdf
-            
+
 workflows:
   version: 2
   build_and_deploy:
