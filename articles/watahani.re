@@ -276,7 +276,7 @@ p2 = p + p
 k2p = ecdsa.VerifyingKey.from_public_point(p2, curve=ecdsa.SECP256k1)
 
 print(k2p.to_string().hex())
-# e0cf532282ef286226bece17f2e055d9bd54561883eaff73e14746765df64b3d16ed44e41c5c057ca009ccfac39f2b22ceed7c1e9d2404915576fffc27cf5cb9
+# e0cf532282ef286226bec....
 # k2 = k1*2
 k2 = bytes.fromhex('375709cd0fc6ca29dd5eb402f861a6583eb3ba9d4cc53b4f2e1946e8a27ba00c')
 k2p_from_prikey = ecdsa.SigningKey.from_string(k2, curve=ecdsa.SECP256k1).get_verifying_key()
@@ -286,7 +286,7 @@ print(p2 == k2p_from_prikey.pubkey.point)
 
 //}
 
-ここで注目すべきは、秘密鍵 '1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006' から生成した公開鍵 @<b>{k1p} の座標 p を加算した @<b>{p2} が、秘密鍵 '375709cd0fc6ca29dd5eb402f861a6583eb3ba9d4cc53b4f2e1946e8a27ba00c' から生成した公開鍵 p2_from_prikey の座標と等しいことです。
+ここで注目すべきは、秘密鍵 '1bab84e687....' から生成した公開鍵 @<b>{k1p} の座標 p を加算した @<b>{p2} が、秘密鍵 '375709cd0f....' から生成した公開鍵 p2_from_prikey の座標と等しいことです。
 実は楕円曲線暗号では k1*@<i>{G} + k2*@<i>{G} = (k1 + k2)*@<i>{G} が成り立ちます。
 この性質はDH鍵交換などのアルゴリズムを学んだ方には馴染み深いものだと思いますが、この後の HD ウォレットの説明には必須の知識ですのでしっかり覚えておいてください。
 
@@ -323,7 +323,7 @@ print("m_prikey: ", m_key.to_string().hex())
 # m_prikey:  b681f32891f35b55034fc26d0317bffaf7b0ecc0f4058ca221e4bfc991cb4470
 
 print("m_pubkey: ", m_pubkey.to_string().hex())
-# m_pubkey:  4a467119fc2a0638eb762677fca69f6c92e8bd36dff87f30c553e4764c5fe10b7365c5190d5176d23c3956c8d0d5c2bb05406a0acdde77ab57d03851fe2b6646
+# m_pubkey:  4a467119fc2a0638eb762677fca69f6c92e8bd36dff87f30c553e4764c5fe10...
 
 print("m_ccode : ", m_ccode.hex())
 # m_ccode :  39c759f2df91af229f2237ea6ed9eb102da188e68bcdab3b2913b215bfeae030
@@ -364,7 +364,7 @@ print("m_0_prikey: ", m_0_key.to_string().hex())
 # m/0 prikey:  310422ff2971eb66e7047383b52bfab28994703660f42a3395d1c56d3650a5de
 
 print("m_0_pubkey: ", m_0_key.get_verifying_key().to_string().hex())
-# m/0 pubkey:  adef0692801bed2606510b9eb1680d7b02882c88def3760851bc8e3ec152bd0ac6d187b85b082e215fa4b7c4f3b86ddc7382b35728bd6a6f0424d03f99ed2206
+# m/0 pubkey:  adef0692801bed2606510b9eb1680d7b02882c88def3760851bc8e3ec152bd0a...
 
 
 print("m_0_ccode : ", m_0_ccode.hex())
@@ -382,7 +382,7 @@ print("m/0/1 prikey: ", m_0_1_key.to_string().hex())
 # m/0/1 prikey:  4bf0f511bbf7bfbbcc8da0c91c33d77c66d86e6c249f60e1c5f10a943504b9a4
 
 print("m/0/1 pubkey: ", m_0_1_key.get_verifying_key().to_string().hex())
-# m/0/1 pubkey:  9d63574b6578babeb3c7b21bccbbc6ff3cd0de3391b662f14bebdb94706c03bcee1061395a9e1ec0f90734fb6129c8238da352380089052ccb54c723ca60ef47
+# m/0/1 pubkey:  9d63574b6578babeb3c7b21bccbbc6ff3cd0de3391b662f14bebdb94706c03bc...
 
 print("m/0/1 ccode : ", m_0_1_ccode.hex())
 # m/0/1 ccode :  6f14f270f19c7ac300f7fc5bbb6274ed974f36b4b5ecac60244a33d71a821043
