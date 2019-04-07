@@ -93,10 +93,6 @@ Authenticator のバックアップが可能ということは、すなわちデ
 
 当然リカバリー用の Authenticator を登録する際にも、秘密鍵をエクスポートするわけにはいきません。では、公開鍵を登録すれば解決するのでしょうか。
 
-#@# コラムにする？
-もっとも筆者はバックアップが可能であることが、悪だとは考えておりません。
-世の中にはバックアップ可能な FIDO デバイスも存在しており、今回のアカウントリカバリーの方法は、そのデバイスの仕組みが大きなヒントになりました。
-
 ==== サービスごとの異なるキーペア
 
 結論からいうと、公開鍵をただエクスポートしただけではリカバリー用のキーは作成できません。
@@ -106,7 +102,7 @@ YubiKey のようなデバイスでは多くの場合、デバイスを登録す
 秘密鍵の生成にはデバイスに埋め込まれた device secret（認証に用いる秘密鍵とは異なる）を利用します。
 device secret に対応する公開鍵だけでは、キーペアは当然作れませんし、かといって device secret をエクスポートする行為は論外です。
 
-ですので、リカバリー用のキーがメインのデバイスに渡す情報は、秘密鍵は含まないもののアプリケーションごとの公開鍵を作成できる情報である必要があります。
+ですので、リカバリー用のキーがメインのデバイスに渡す情報は、秘密鍵がなくとも、アプリケーションごとの公開鍵を作成できる情報である必要があります。
 
 == HD ウォレットの仕組み
 
@@ -115,20 +111,23 @@ Authenticator のバックアップが難しいことが分かったところで
 //image[w-ledger][Ledger Nano S * Ledger SAS. https://shop.ledger.com/ より引用][scale=0.5]
 
 #@# TODO キーの紹介
+===column Ledger Nano S の紹介
+もっとも筆者はバックアップが可能であることが、悪だとは考えておりません。
+世の中にはバックアップ可能な FIDO デバイスも存在しており、今回のアカウントリカバリーの方法は、そのデバイスの仕組みが大きなヒントになりました。
 
-HD ウォレットは BIP0032@<fn>{BIP0031} で定義されているビットコインのウォレット管理プロトコルです。
+HD ウォレットは BIP0032@<fn>{BIP0032} で定義されているビットコインのウォレット管理プロトコルです。
 HD ウォレットは Hierarchical Deterministic（階層的決定性）ウォレットの略で、ひとつのシードから複数の秘密鍵を作成できるのですが、階層的決定性とあるように階層的に秘密鍵を生成できます。
 @<img>{w-hd} にあるようにマスターキーを m として、m の子 m/x, またその子 m/x/y のように階層的に秘密鍵を作成できます。@<fn>{hierarchical}また、同じシードからは同じ秘密鍵の階層を作成可能です。
 
 //image[w-hd][階層的な鍵生成] 
 
 
-//footnote[BIP0031][https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki]
+//footnote[BIP0032][https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki]
 
 //footnote[hierarchical][bitcoin ウォレットのプロトコルでは、マスターキーを @<i>{m} ,そこの子を @<i>{m/x}, その子を @<i>{m/x/y} と呼ぶため、本書でもそのように呼称します。]
 
 結論からいうと、この HD ウォレットの仕組みが Authenticator のリカバリープロトコルに利用できると考えています。
-つまり、「秘密鍵は含まないものの、アプリケーションごとの公開鍵を生成できる」仕組みを HD ウォレットは備えているのです。
+つまり、「秘密鍵がなくとも、アプリケーションごとの公開鍵を生成できる」仕組みを HD ウォレットは備えているのです。
 
 その為、この章では、HD ウォレットの仕組みについて少し解説していきます。
 
@@ -293,10 +292,20 @@ print(p2 == k2p_from_prikey.pubkey.point)
 === マスター秘密鍵の作成
 
 話を HD ウォレットに戻しましょう。HD ウォレットでは、あるシードから秘密鍵を次々作成可能でした。
-具体的には seed から HMAC-SHA512 を計算し、その左 256 bit を秘密鍵として利用します。
+具体的にどのように生成するかを説明します。まずマスター秘密鍵を作成するため、 seed から HMAC-SHA512 を計算し、その左 256 bit を秘密鍵として利用します。
+@<img>{w-master_keygen} が実際のフローです。
 
+//image[w-master_keygen][マスター秘密鍵の生成フロー]
 
-//listnum[hd_authenticator.py(1)][マスター秘密鍵の生成][python]{
+コードにしたものが、@<list>{master_keygen} です。
+
+hmac512() は、key と source から HMAC-SHA512 を計算する関数です。BIP0032 では "Bitcoin seed" がキーとするよう決められているそうですが、ここでは "webauthn" をキーとしています。
+prikey_and_ccode() は、与えられた key と seed から、HMAC-SHA512 を計算し、HMAC の左 256bit から楕円曲線 SECP256k1 の秘密鍵を、残りの 256bit を ccode として返します。
+ccode はチェーンコードと呼ばれるもので、ここではマスターキーのチェーンコードですのでマスターチェーンコードと呼びます。
+
+@<list>{master_keygen} で生成される値を @<img>{w-master_keygen} に記載しましたので、見比べてみてください。
+
+//listnum[master_keygen][マスター秘密鍵の生成][python]{
 import hmac
 import hashlib
 import ecdsa
@@ -319,82 +328,158 @@ def prikey_and_ccode(key, seed):
 m_key, m_ccode = prikey_and_ccode('webauthn', 'techbookfest')
 m_pubkey = m_key.get_verifying_key()
 
-print("m_prikey: ", m_key.to_string().hex())
-# m_prikey:  b681f32891f35b55034fc26d0317bffaf7b0ecc0f4058ca221e4bfc991cb4470
+print("m_prikey:", m_key.to_string().hex())
+# m_prikey: b681f32891f35b55034fc26d0317bffaf7b0ecc0f4058ca221e4bfc991cb4470
 
-print("m_pubkey: ", m_pubkey.to_string().hex())
-# m_pubkey:  4a467119fc2a0638eb762677fca69f6c92e8bd36dff87f30c553e4764c5fe10...
+print("m_pubkey:", m_pubkey.to_string().hex())
+# m_pubkey: 4a467119fc2a0638eb762677fca69f6c92e8bd36dff87f30c553e4764c5fe10...
 
-print("m_ccode : ", m_ccode.hex())
-# m_ccode :  39c759f2df91af229f2237ea6ed9eb102da188e68bcdab3b2913b215bfeae030
+print("m_ccode :", m_ccode.hex())
+# m_ccode : 39c759f2df91af229f2237ea6ed9eb102da188e68bcdab3b2913b215bfeae030
 
 //}
 
-hmac512() は、key と source から HMAC-SHA512 を計算する関数です。BIP0032 では "Bitcoin seed" がキーとするよう決められているそうですが、ここでは "webauthn" をキーとしています。
-prikey_and_ccode() は、与えられた key と seed から、HMAC-SHA512 を計算し、HMAC の左 256bit から楕円曲線 SECP256k1 の秘密鍵を、残りの 256bit を ccode として返します。
-ccode はチェーンコードと呼ばれるもので、ここではマスターキーのチェーンコードですのでマスターチェーンコードと呼びます。
-
-
 === 子秘密鍵の作成
 
+次にチェーンコードと秘密鍵から子秘密鍵を生成します。フローは少し複雑ですが、利用するのは先ほどと同じ HMAC-SHA512 です。
+先ほどと同じく @<list>{key_generation_flow} で実際に生成される値と同じ値を @<img>{w-key_generation_flow} に書き込みましたので、よく見比べてください。
 
-//listnum[hd_authenticator_3][子秘密鍵の生成][python]{
+子秘密鍵を生成する流れを少し説明します。
+子秘密鍵は親秘密鍵と、親チェーンコードから作られます。
+今回は m_key（b681...）と m_ccode（39c7...）から作ります。
 
-def deltakey_and_ccode_from(index, pubkey, ccode):
+まず m_key の公開鍵 m_pubkey を計算します。これは m_key.get_verifying_key().to_string() で求められます。
+次に index を作成します。バイト配列にする必要があるので、なんとなく 4bytes になるよう x0000 を作成します。
+そして公開鍵 m_pubkey と index を結合し、結合したものを seed, 親チェーンコード m_ccode を key として HMAC-SHA512 を計算します。
+生成した左半分を deltakey（秘密鍵） として、親秘密鍵と足し合わせます。
+足し合わせたものを、子秘密鍵 m_0_prikey, HMAC-SHA512 の残り半分を、子チェーンコード m_0_ccode として保存します。
+
+//image[w-key_generation_flow][子秘密鍵の作成]
+
+//listnum[key_generation_flow][子秘密鍵の生成][python]{
+def deltakey_and_ccode(index, pubkey, ccode):
     source = pubkey + index
     deltakey, child_ccode = prikey_and_ccode(key=ccode, seed=source)
     return deltakey, child_ccode
 
-def child_key_and_ccode_from(index, prikey, ccode):
+def child_key_and_ccode(index, prikey, ccode):
     ''' generate childkey from prikey and chain code'''
     pubkey = prikey.get_verifying_key().to_string()
-
-    delta_key, child_ccode = deltakey_and_ccode_from(index, pubkey, ccode)
-
-    child_key = add_secret_keys(prikey.to_string(), delta_key.to_string(), order=SECP256k1.order)
+    deltakey, child_ccode = deltakey_and_ccode_from(index, pubkey, ccode)
+    print("deltakey  : ", deltakey.to_string().hex())
+    
+    child_key = add_secret_keys(
+                    prikey.to_string(),
+                    deltakey.to_string(),
+                    order=SECP256k1.order
+                )
     child_key = ecdsa.SigningKey.from_string(child_key, curve=SECP256k1)
     return child_key, child_ccode
 
 index = 0
 index = index.to_bytes(4,'big')
 
-m_0_key, m_0_ccode = child_key_and_ccode_from(index, m_key, m_ccode)
+deltakey, _ = deltakey_and_ccode(index, m_pubkey.to_string(), m_ccode)
 
-print("m_0_prikey: ", m_0_key.to_string().hex())
-# m/0 prikey:  310422ff2971eb66e7047383b52bfab28994703660f42a3395d1c56d3650a5de
+m_0_key, m_0_ccode = child_key_and_ccode(index, m_key, m_ccode)
+print("deltakey  :", delta_key.hex())
+# deltakey  : 7a822fd6977e9011e3b4b116b2143ab64c92605c1c373dcd33bf643074bba2af
 
-print("m_0_pubkey: ", m_0_key.get_verifying_key().to_string().hex())
+print("m_0_prikey:", m_0_key.to_string().hex())
+# m/0 prikey: 310422ff2971eb66e7047383b52bfab28994703660f42a3395d1c56d3650a5de
+
+print("m_0_pubkey:", m_0_key.get_verifying_key().to_string().hex())
 # m/0 pubkey:  adef0692801bed2606510b9eb1680d7b02882c88def3760851bc8e3ec152bd0a...
 
 
-print("m_0_ccode : ", m_0_ccode.hex())
-# m/0 ccode :  96524759775e8d3bb80858ef8e975311aa0a10e8f55d4596bf2e8c21cb37d047
+print("m_0_ccode :", m_0_ccode.hex())
+# m/0 ccode : 96524759775e8d3bb80858ef8e975311aa0a10e8f55d4596bf2e8c21cb37d047
 
 //}
 
+
+同様に子秘密鍵から、さらに子秘密鍵を作成することができ、まさに @<img>{w-hd} のように階層構造のキーペアを生成可能です。
+実際のフローは @<img>{w-cc_keygen_flow} となります。
+
+//image[w-cc_keygen_flow][子秘密鍵と子チェーンコードから、さらにキーを生成]
 
 //listnum[hd_authenticator_4][子秘密鍵の子を作成][python]{
 index = 1
 index = index.to_bytes(4, 'big')
-m_0_1_key, m_0_1_ccode = child_key_and_ccode_from(index, m_0_key, m_0_ccode)
+m_0_1_key, m_0_1_ccode = child_key_and_ccode(index, m_0_key, m_0_ccode)
 
 print("m/0/1 prikey: ", m_0_1_key.to_string().hex())
-# m/0/1 prikey:  4bf0f511bbf7bfbbcc8da0c91c33d77c66d86e6c249f60e1c5f10a943504b9a4
+# m/0/1 prikey: 4bf0f511bbf7bfbbcc8da0c91c33d77c66d86e6c249f60e1c5f10a943504b9a4
 
 print("m/0/1 pubkey: ", m_0_1_key.get_verifying_key().to_string().hex())
 # m/0/1 pubkey:  9d63574b6578babeb3c7b21bccbbc6ff3cd0de3391b662f14bebdb94706c03bc...
 
-print("m/0/1 ccode : ", m_0_1_ccode.hex())
-# m/0/1 ccode :  6f14f270f19c7ac300f7fc5bbb6274ed974f36b4b5ecac60244a33d71a821043
+print("m/0/1 ccode :", m_0_1_ccode.hex())
+# m/0/1 ccode : 6f14f270f19c7ac300f7fc5bbb6274ed974f36b4b5ecac60244a33d71a821043
 //}
 
 === 拡張公開鍵
 
+さて、ここまでで、ひとつの秘密鍵と、ひとつのチェーンコードから無限のキーペアを生成できることがわかりました。
+ここで子秘密鍵の生成フロー @<img>{w-cc_keygen_flow} をもう一度よく見てみましょう。
+今回、HDウォレットを解説したのは「秘密鍵がなくても、アプリケーションごとの公開鍵を生成できる」仕組みを知るためでした。
+では @<img>{w-cc_keygen_flow} から秘密鍵を取り除くとどうなるでしょうか？
 
+実は秘密鍵がなくとも、子公開鍵であれば生成可能です。
+実際に計算してみましょう。
+
+@<b>{m_0_pubkey} と @<b>{m_0_ccode} から @<b>{m_0_1_pubkey} と @<b>{m_0_1_ccode} を生成します。
+
+まず、@<b>{m_0_1_ccode} は簡単です。そもそも m_0_pubkey と index を連結したものを seed に、 m_0_ccode を key として HMAC-SHA512 をとったものが @<b>{deltakey} と @<b>{m_0_1_ccode} でした。
+次に注目すべきは、m_0_1_pubkey が m_0_1_deltakey と m_0_prikey を加算した m_0_1_prikey の公開鍵である点です。
+
+@<list>{sample3} で解説したとおり、楕円曲線暗号では k1*@<i>{G} + k2*@<i>{G} = (k1 + k2)*@<i>{G} が成り立ちます。
+ここでは秘密鍵 m_0_1_prikey と m_0_1_deltakey を加算したものが m_0_1_prikey ですから、次の式が成り立ちます。@<fn>{add_point} 
+
+ * m_0_prikey*@<i>{G} + m_0_1_deltakey*@<i>{G} = (m_0_1_prikey)*@<i>{G} = m_0_1_pubkey
+
+ここで
+
+ * m_0_prikey*@<i>{G} = m_0_pubkey
+ 
+ですから、
+
+ * m_0_1_pubkey = m_0_pubkey + m_0_1_deltakey*@<i>{G}
+
+と計算でき、秘密鍵を使わずに、子鍵の公開鍵とチェーンコードを生成することができました。
+
+//footnote[add_point][実際に加算するのは公開鍵そのものではなく、座標です]
+
+実際のコードは @<list>{extended_pubkey} です。
+今回も（少しわかりにくいですが）全体のフロー図を、実際の値と共に載せていますので理解の助けにしてください。
+
+//listnum[extended_pubkey][公開鍵とチェーンコードから子公開鍵を作成][python]{
+index = 1
+index = index.to_bytes(4, 'big')
+
+m_0_pubkey = m_0_key.get_verifying_key()
+
+m_0_1_deltakey, m_0_1_ccode = deltakey_and_ccode(index, m_0_pubkey.to_string(), m_0_ccode)
+m_0_1_delta_pubkey = m_0_1_deltakey.get_verifying_key()
+print("delta_pubkey:", m_0_1_delta_pubkey.to_string().hex())
+# delta_pubkey: f2f2584425210aae1deca1803d019b941115a46d16c7d1cdf4279617da6e2f1b76...
+
+m_0_1_deltakey_point = m_0_1_delta_pubkey.pubkey.point
+m_0_1_point = m_0_pubkey.pubkey.point + m_0_1_deltakey_point
+
+m_0_1_pubkey = ecdsa.VerifyingKey.from_public_point(m_0_1_point, curve=SECP256k1)
+print("m/0/1_pubkey:",m_0_1_pubkey.to_string().hex())
+# m/0/1_pubkey: 9d63574b6578babeb3c7b21bccbbc6ff3cd0de3391b662f14bebdb94706c03bc...
+print("m/0/1 ccode :", m_0_1_ccode.hex())
+# m/0/1 ccode : 6f14f270f19c7ac300f7fc5bbb6274ed974f36b4b5ecac60244a33d71a821043
+//}
+
+//image[w-extended_pubkey][公開鍵とチェーンコードから子公開鍵を作成するフロー]
+
+これで秘密鍵を利用せずに、公開鍵とチェーンコードから子公開鍵と子チェーンコードを生成する仕組みが理解できたと思います。
+実は BIP0032 で定義されている拡張公開鍵は、公開鍵とチェーンコードと index, depth, などをまとめて管理するフォーマットなのですが、今回はフォーマットには触れず、その仕組みだけを拝借します。
 
 == バックアップ用 Authenticator の作成
-
-以上の
 
 ===　Public Key seed の作成
 
