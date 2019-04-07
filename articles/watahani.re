@@ -131,9 +131,6 @@ HD ウォレットは Hierarchical Deterministic（階層的決定性）ウォ�
 つまり、「秘密鍵は含まないものの、アプリケーションごとの公開鍵を生成できる」仕組みを HD ウォレットは備えているのです。
 
 その為、この章では、HD ウォレットの仕組みについて少し解説していきます。
-といっても、細かい仕組みは理解する必要は無いので（筆者も理解していません）安心してください。
-
-ではどのように HD ウォレットがキーペアの階層構造を生成するのかを見ていきましょう。
 
 === 楕円曲線暗号の数学的性質
 
@@ -225,6 +222,74 @@ print("verified: ", pubkey.verify(sign, data))
 
 //}
 
+
+HD ウォレットの説明に入る前に、ふたつの関数を定義しておきます。
+秘密鍵の加算と公開鍵（楕円曲線上の座標）の加算です。
+
+まずは秘密鍵同士の加算用関数です。
+秘密鍵はベースポイント @<i>{G} を何倍したか、という値でしたので単に整数として足すだけです。
+ただし、楕円曲線の位数（order）を超えてはいけないので curve.order の余剰を返します。入力チェックなどは省略しています。
+
+//listnum[sample1][秘密鍵の加算][python]{
+from math import log2
+
+def add_secret_keys(*args, order):
+    ''' add two prikey as int and return private key of ecdsa lib'''
+    prikey = 0
+
+    for key in args:
+        if prikey == 0:
+            prikey = int.from_bytes(key, "big")
+        else:
+            prikey = (prikey + int.from_bytes(key, "big")) % order
+
+    return prikey.to_bytes( int(log2(order)/8), 'big')
+
+
+k1 = '1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006'
+
+key1 = bytes.fromhex('1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006')
+key2 = bytes.fromhex('1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006')
+expect = bytes.fromhex('375709cd0fc6ca29dd5eb402f861a6583eb3ba9d4cc53b4f2e1946e8a27ba00c')
+
+add_secret_keys(key1, key2, order=SECP256k1.order ) == expect
+# True
+//}
+
+
+次に公開鍵の加算用関数ですが、すでに ecdsa ライブラリの Point クラスで定義されているため、そちらを利用します。
+@<list>{sample3} は公開鍵 k1p の座標 p に p　を加算して新しい公開鍵を生成しています。
+ecdsa ライブラリの Point クラスには __add__ 関数がすでに定義されているので  p + p のように記述すれば大丈夫です。
+公開鍵の座標は VerifyingKey.pubkey.point で取得できます。
+座標から公開鍵へは ecdsa.VerifyingKey.from_public_point() を利用します。
+
+//listnum[sample3][公開鍵の加算][python]{
+k1 = bytes.fromhex('1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006')
+
+
+k1p = ecdsa.SigningKey.from_string(k1, curve=ecdsa.SECP256k1).get_verifying_key()
+
+p = k1p.pubkey.point
+
+p2 = p + p
+
+k2p = ecdsa.VerifyingKey.from_public_point(p2, curve=ecdsa.SECP256k1)
+
+print(k2p.to_string().hex())
+# e0cf532282ef286226bece17f2e055d9bd54561883eaff73e14746765df64b3d16ed44e41c5c057ca009ccfac39f2b22ceed7c1e9d2404915576fffc27cf5cb9
+# k2 = k1*2
+k2 = bytes.fromhex('375709cd0fc6ca29dd5eb402f861a6583eb3ba9d4cc53b4f2e1946e8a27ba00c')
+k2p_from_prikey = ecdsa.SigningKey.from_string(k2, curve=ecdsa.SECP256k1).get_verifying_key()
+
+print(p2 == k2p_from_prikey.pubkey.point)
+# True
+
+//}
+
+ここで注目すべきは、秘密鍵 '1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006' から生成した公開鍵 @<b>{k1p} の座標 p を加算した @<b>{p2} が、秘密鍵 '375709cd0fc6ca29dd5eb402f861a6583eb3ba9d4cc53b4f2e1946e8a27ba00c' から生成した公開鍵 p2_from_prikey の座標と等しいことです。
+実は楕円曲線暗号では k1*@<i>{G} + k2*@<i>{G} = (k1 + k2)*@<i>{G} が成り立ちます。
+この性質はDH鍵交換などのアルゴリズムを学んだ方には馴染み深いものだと思いますが、この後の HD ウォレットの説明には必須の知識ですのでしっかり覚えておいてください。
+
 === マスター秘密鍵の作成
 
 話を HD ウォレットに戻しましょう。HD ウォレットでは、あるシードから秘密鍵を次々作成可能でした。
@@ -271,38 +336,6 @@ ccode はチェーンコードと呼ばれるもので、ここではマスタ�
 
 
 === 子秘密鍵の作成
-
-子秘密鍵を作成する前に、秘密鍵同士の加算用関数を定義しておきます。秘密鍵はベースポイント @<i>{G} を何倍したか、という値でしたので単に整数として足すだけです。
-ただし、楕円曲線の位数（order）を超えてはいけないので curve.order の余剰を返します。入力チェックなどは省略しています。
-
-//listnum[sample1][秘密鍵の加算][python]{
-
-from math import log2
-
-def add_secret_keys(*args, order):
-    ''' add two prikey as int and return private key of ecdsa lib'''
-    prikey = 0
-
-    for key in args:
-        if prikey == 0:
-            prikey = int.from_bytes(key, "big")
-        else:
-            prikey = (prikey + int.from_bytes(key, "big")) % order
-
-    return prikey.to_bytes( int(log2(order)/8), 'big')
-
-
-k1 = '1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006'
-
-key1 = bytes.fromhex('1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006')
-key2 = bytes.fromhex('1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006')
-expect = bytes.fromhex('375709cd0fc6ca29dd5eb402f861a6583eb3ba9d4cc53b4f2e1946e8a27ba00c')
-
-add_secret_keys(key1, key2, order=SECP256k1.order ) == expect
-# True
-
-//}
-
 
 
 //listnum[hd_authenticator_3][子秘密鍵の生成][python]{
@@ -360,6 +393,8 @@ print("m/0/1 ccode : ", m_0_1_ccode.hex())
 
 
 == バックアップ用 Authenticator の作成
+
+以上の
 
 ===　Public Key seed の作成
 
