@@ -111,9 +111,15 @@ Authenticator のバックアップが難しいことが分かったところで
 //image[w-ledger][Ledger Nano S * Ledger SAS. https://shop.ledger.com/ より引用][scale=0.5]
 
 #@# TODO キーの紹介
-===column Ledger Nano S の紹介
-もっとも筆者はバックアップが可能であることが、悪だとは考えておりません。
-世の中にはバックアップ可能な FIDO デバイスも存在しており、今回のアカウントリカバリーの方法は、そのデバイスの仕組みが大きなヒントになりました。
+===[column]  Ledger Nano S の紹介
+Ledger Nano S は、HDウォレットを実装しているビットコインウォレットの一つです。
+ビットコインやイーサリアムといった仮想通貨のウォレットとしてだけではなく、FIDO U2F のキーとしても動作します。
+面白いことに、HDウォレットの仕組みから、ある seed をもとに Authenticator のリストアが可能です。
+U2F のキーについても、 seed さえ忘れなければ同じキーが復元可能です。
+安全性はともかく、面白い仕組みと言えるでしょう。
+#@# もっとも筆者はバックアップが可能であることが、悪だとは考えておりません。
+#@# 世の中にはバックアップ可能な FIDO デバイスも存在しており、今回のアカウントリカバリーの方法は、そのデバイスの仕組みが大きなヒントになりました。
+===[/column]
 
 HD ウォレットは BIP0032@<fn>{BIP0032} で定義されているビットコインのウォレット管理プロトコルです。
 HD ウォレットは Hierarchical Deterministic（階層的決定性）ウォレットの略で、ひとつのシードから複数の秘密鍵を作成できるのですが、階層的決定性とあるように階層的に秘密鍵を生成できます。
@@ -180,7 +186,6 @@ HD ウォレットについて理解するには、少しばかり楕円曲線�
 では実際に ECDSA を利用してみましょう。
 今回のサンプルコードはすべて python3 で記述されています。なお、すべてのコードは GitHub @<fn>{samplecode} にアップロードしていますので適宜参考にしてください。 @<fn>{note} 
 
-#@# TODO コード上げる
 //footnote[samplecode][https://www.github.com/watahani/hd-authenticator]
 
 //footnote[note][しばらくサンプルコードが続きますが、ひとつのファイルである前提です。]
@@ -246,12 +251,15 @@ def add_secret_keys(*args, order):
 
 
 k1 = '1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006'
+k2 = '375709cd0fc6ca29dd5eb402f861a6583eb3ba9d4cc53b4f2e1946e8a27ba00c'
+key1 = bytes.fromhex(k1)
+expect = bytes.fromhex(k2)
 
-key1 = bytes.fromhex('1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006')
-key2 = bytes.fromhex('1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006')
-expect = bytes.fromhex('375709cd0fc6ca29dd5eb402f861a6583eb3ba9d4cc53b4f2e1946e8a27ba00c')
+result = add_secret_keys(key1, key1, order=ecdsa.SECP256k1.order )
+print(result.hex())
+# 375709cd0fc6ca29dd5eb402f861a6583eb3ba9d4cc53b4f2e1946e8a27ba00c
 
-add_secret_keys(key1, key2, order=SECP256k1.order ) == expect
+print(result == expect)
 # True
 //}
 
@@ -263,7 +271,9 @@ ecdsa ライブラリの Point クラスには __add__ 関数がすでに定義�
 座標から公開鍵へは ecdsa.VerifyingKey.from_public_point() を利用します。
 
 //listnum[sample3][公開鍵の加算][python]{
-k1 = bytes.fromhex('1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006')
+k1 = bytes.fromhex(
+  '1bab84e687e36514eeaf5a017c30d32c1f59dd4ea6629da7970ca374513dd006'
+)
 
 
 k1p = ecdsa.SigningKey.from_string(k1, curve=ecdsa.SECP256k1).get_verifying_key()
@@ -277,8 +287,13 @@ k2p = ecdsa.VerifyingKey.from_public_point(p2, curve=ecdsa.SECP256k1)
 print(k2p.to_string().hex())
 # e0cf532282ef286226bec....
 # k2 = k1*2
-k2 = bytes.fromhex('375709cd0fc6ca29dd5eb402f861a6583eb3ba9d4cc53b4f2e1946e8a27ba00c')
-k2p_from_prikey = ecdsa.SigningKey.from_string(k2, curve=ecdsa.SECP256k1).get_verifying_key()
+
+k2 = bytes.fromhex(
+  '375709cd0fc6ca29dd5eb402f861a6583eb3ba9d4cc53b4f2e1946e8a27ba00c'
+)
+
+k2p_from_prikey = ecdsa.SigningKey.from_string(k2, curve=ecdsa.SECP256k1)
+                                  .get_verifying_key()
 
 print(p2 == k2p_from_prikey.pubkey.point)
 # True
@@ -480,6 +495,57 @@ print("m/0/1 ccode :", m_0_1_ccode.hex())
 実は BIP0032 で定義されている拡張公開鍵は、公開鍵とチェーンコードと index, depth, などをまとめて管理するフォーマットなのですが、今回はフォーマットには触れず、その仕組みだけを拝借します。
 
 == バックアップ用 Authenticator の作成
+
+では実際に WebAuthn で利用できるバックアップ Authenticator を作成してみましょう。
+コードの全体は GitHub を参照ください。
+
+//listnum[hdkey][HD Authenticator のサンプルコード][python]{
+class HDKey(object):
+    ''' extended key '''
+    def __init__(self,keyid, prikey, ccode, pubkey, is_prikey, parentId=None, depth=0):...
+
+    def _checksum(self, source, appid_hash=None):...
+
+    def _generateRandomKeyId(self, appid_hash=None):...
+
+    def _child_key_from_id(self, keyid, appid_hash=None):...
+
+    def sign(self, source):...
+
+    def app_prikey(self, credid, appid_hash):
+        if not self.is_prikey:
+            raise Exception('this key doesn\'t prikey') 
+
+        if len(credid) == CRED_ID_LENGTH:
+            childkey = self._child_key_from_id(credid[:KEY_ID_LENGTH])
+            prikey = childkey._child_key_from_id(credid[KEY_ID_LENGTH:], appid_hash)
+            return prikey
+        else:
+            return None
+
+    def pubkey_seed(self):
+        child_keyid = self._generateRandomKeyId()
+        return self._child_key(child_keyid,include_prikey=False)
+
+    def app_pubkey(self, appid_hash):
+        if not self.depth == 1:
+            raise Exception('app pubkey should be generated by child key')
+        elif not appid_hash:
+            raise Exception('required appid_hash to generate app pubkey')
+        else:
+            child_keyid = self._generateRandomKeyId(appid_hash=appid_hash)
+            return self._child_key(child_keyid,include_prikey=False)
+
+    def is_child_key_id(self, keyid, appid_hash=None):
+        keyid_L = keyid[:HALF_KEY_ID_LENGTH]
+        keyid_R = keyid[HALF_KEY_ID_LENGTH:]
+
+        return keyid_R == self._checksum(keyid_L, appid_hash=appid_hash)
+//}
+
+HDKey は Authenticator 内のキージェネレーターだと考えてください。
+HDKey は
+このコードでは、先ほどの拡張公開鍵のしくみを利用して
 
 ===　Public Key seed の作成
 
