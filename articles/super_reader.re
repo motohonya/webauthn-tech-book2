@@ -5,10 +5,11 @@
   読んでくださる方の役にたつのでは思いました。
 
 そこで、今回は「FIDOとOpenID Connectの関係性」について書きたいと思います。
-私自身、ID連携に関して知識をかじった後にFIDOなどの認証の世界を学んでいった経緯もあり、それぞれの仕様について触れてきた立場から
-ものすごく簡単にはなりますが、それぞれの仕様がどのように関連しているのかを少しでも知っていただけたら幸いです。
+私自身、ID連携に関して知識をかじった後にFIDOなどの認証の世界を学んでいった経緯もあり、それぞれの仕様について触れてきた立場から、
+簡単にはなりますが、それぞれの仕様がどのように関連しているのかを解説したいと思います。
 
 今回話したい題材は以下になります。
+
  1. OpenID ConnectにとってのFIDOとは？
  2. OpenID ConnectとFIDOでのRelying Partyについて
  3. FIDOとSelf-issuedについて
@@ -28,6 +29,7 @@ ID連携とは連携先のサービス(Relying Party)に対して、IDやパス�
 簡単にID連携に関して説明をさせていただきましたが、OIDCに関して、それぞれの細かな仕様のここでの説明は割愛させていただきます。
 (全部書いてしまうと、とても長くなってしまうので)
 @<br>{}その代わり以下にOIDCの理解に役立ちそうなサイトのリンクを記載させていただきます。
+
  * @<href>{https://qiita.com/TakahikoKawasaki/items/498ca08bbfcc341691fe,一番分かりやすい OpenID Connect の説明}
  * @<href>{https://speakerdeck.com/nov/oauth-2-dot-0-and-openid-connect-ji-chu-at-openid-meetup-fukuoka,OAuth2.0 & OpenID Connect基礎}
  * @<href>{https://www.slideshare.net/kura_lab/openid-connect-id,OpenID Connnect入門}
