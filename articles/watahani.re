@@ -585,7 +585,7 @@ appid_hash は keyid と共に pubkey_seed のチェーンコードをキーと�
 
 //image[w-hdkey_flow][HDKey クラスによる recovery フロー]
 
-===　マスターキーの生成
+=== マスターキーの生成
 
 実際にそれぞれのキーを生成して、署名や検証が可能か確認してみましょう。
 まずはデバイスのマスターキーを生成します。
@@ -614,7 +614,7 @@ master_key.print_debug()
 === Public Key seed の作成
 
 マスターキーから Public Key seed を作成します。
-先ほど拡張公開鍵を作成した方法と同じアルゴリズムで、チェーンコードを含む公開鍵を生成します。
+先ほど拡張公開鍵を作成したときと同じアルゴリズムで、チェーンコードを含む公開鍵を生成します。
 実際のコードは@<list>{pubkey_seed} です。
 
 //listnum[pubkey_seed][Public Key seed の生成][python]{
@@ -633,7 +633,8 @@ pubkey_seed.print_debug()
 //}
 
 先ほどの拡張公開鍵を作成した時と異なるのは、keyid というパラメータを生成している点です。
-keyid を生成する際には、ランダムナンスを半分の長さで生成します。ここでは 128bit 長の nonce を加算して新しい公開鍵を生成しています。  @<fn>{random} 
+keyid を生成する際には、まず、ランダムナンスを keyid の半分の長さで生成します。
+ここでは 128bit 長の nonce を生成しています。@<fn>{random} 
 次に、自身のチェーンコードを利用して nonce から hmac512 を計算し、その先頭 128bit をchecksum として返します。
 そして nonce と checksum を合成したものを keyid として返します。
 
@@ -729,7 +730,7 @@ result = app_pubkey.verify(sign, source)
 次に、credentialID の残りの半分を、署名用の秘密鍵の _child_key_from_id() メソッドに appid_hash と共に渡します。
 このとき、 _child_key_from_id メソッド内では、is_child_key_id() メソッドで、与えられた credentialID と appid_hash が本当に、
 マスターキーから生成されたものかをチェックしています。
-マスターキーで生成された credentialID 意外を指定した場合、 invalid keyid という例外が投げられます。
+マスターキーで生成された credentialID ではない ID を指定した場合、 invalid keyid という例外が投げられます。
 
 //listnum[recovery_prikey][秘密鍵の生成コード][python]{
 
@@ -751,7 +752,7 @@ result = app_pubkey.verify(sign, source)
             raise Exception('invalid keyid {}'.format(keyid.hex()))
 //}
 
-この credentialID をチェックする機構は YubiKey が credentialID を生成する仕組みを参考に実装しました。
+この credentialID をチェックするアルゴリズムは YubiKey が credentialID を生成する仕組みを参考に実装しました。
 
 
 === 署名の検証
