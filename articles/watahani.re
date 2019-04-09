@@ -80,7 +80,7 @@ WebAuthn のスペックには Extension と呼ばれる拡張データが定め
 次にリカバリーの流れです。
 想定としては、通常は「キーの紛失」リンクから、メールアドレスを入力しサービスから送信されるリカバリーフローへのリンクから開始することになるかと思います。
 
- 1. サーバーはどの Authenticator をリカバリするかをユーザーに選択させる画面を表示し、ユーザーはなくした Authenticator を選択
+ 1. サーバーはどの Authenticator をリカバリーするかをユーザーに選択させる画面を表示し、ユーザーはなくした Authenticator を選択
  2. サーバーはなくした Authenticator に紐づけられている recovery Credentials のリストを Extension に含めて送信
  3. Client は credentials.create() コマンドを recovery Extension の action = "recover", allowCredentials = [ recovery credential] で実行
  4. リカバリー用の Authenticator は allowCredentials に自身の CredentialId が含まれていれば、対応する秘密鍵で署名を返す
@@ -627,7 +627,7 @@ pubkey_seed.print_debug()
 # depth    : 1
 # keyid    : b66b0b6a66fce126869e3d5042169886a6e832e631350f356bad2f22d026ca62
 # prikey   : None
-# pubkey   : 356cddf81e91cbdeaed452a988c5fd9b4c36e24d5a6b916dc87cb10be239b6e07d3d8da70b0a4c9b32fb83bd5890b70494aca0ab451644494d716f6d176fe2c5
+# pubkey   : 356cddf81e91cbdeaed452a988c5fd9b4c36e24d5a6b916dc87cb10be239b6e0...
 # credid   : b66b0b6a66fce126869e3d5042169886a6e832e631350f356bad2f22d026ca62
 # ccode    : 0753795ad0c1be808005b008ee6f0d670641eb8c641cd1790cc4e3a0eb815be5
 //}
@@ -735,7 +735,7 @@ result = app_pubkey.verify(sign, source)
 
     def app_prikey(self, credid, appid_hash):
         if not self.is_prikey:
-            raise Exception('this key doesn\'t prikey') 
+            raise Exception('this key does not prikey') 
 
         if len(credid) == CRED_ID_LENGTH:
             childkey = self._child_key_from_id(credid[:KEY_ID_LENGTH])
@@ -773,8 +773,8 @@ print('result:', result)
 
 # ========   result   ==========
 # souce : nonce
-# pubkey: fff4ba46d2348c48dbe99bef1c8bf99b6f02513c58562f7f12f8969fb0c6737f313b88224...
-# sign  : bd5e8f09f821240db155ca35935f022e852cd7d06093f62f5b2593331c1248599f1fababa...
+# pubkey: fff4ba46d2348c48dbe99bef1c8bf99b6f02513c58562f7...
+# sign  : bd5e8f09f821240db155ca35935f022e852cd7d06093f62...
 # result: True
 //}
 
