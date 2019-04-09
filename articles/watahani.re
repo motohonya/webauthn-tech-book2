@@ -515,7 +515,8 @@ print("m/0/1 ccode :", m_0_1_ccode.hex())
 //image[w-extended_pubkey][公開鍵とチェーンコードから子公開鍵を作成するフロー]
 
 これで秘密鍵を利用せずに、公開鍵とチェーンコードから子公開鍵と子チェーンコードを生成する仕組みが理解できたと思います。
-実は BIP0032 で定義されている拡張公開鍵は、公開鍵とチェーンコードと index, depth, などをまとめて管理するフォーマットなのですが、今回はフォーマットには触れず、その仕組みだけを拝借します。
+実は BIP0032 で定義されている拡張公開鍵は、公開鍵とチェーンコードと index, depth, などをまとめて管理するフォーマットなのです。
+ただし、今回はあくまで WebAuthn の Extension として利用するだけなので、フォーマットには触れず、その仕組みだけを拝借します。
 
 == バックアップ用 Authenticator の作成
 
@@ -537,7 +538,7 @@ class HDKey(object):
 
     def app_prikey(self, credid, appid_hash):
         if not self.is_prikey:
-            raise Exception('this key doesn\'t prikey') 
+            raise Exception('this key does not prikey') 
 
         if len(credid) == CRED_ID_LENGTH:
             childkey = self._child_key_from_id(credid[:KEY_ID_LENGTH])
@@ -584,11 +585,206 @@ appid_hash は keyid と共に pubkey_seed のチェーンコードをキーと�
 
 //image[w-hdkey_flow][HDKey クラスによる recovery フロー]
 
-===　Public Key seed の作成
+===　マスターキーの生成
 
-=== CredentialID を作成する
+実際にそれぞれのキーを生成して、署名や検証が可能か確認してみましょう。
+まずはデバイスのマスターキーを生成します。
+
+
+//listnum[masterkey][マスターキーの生成][python]{
+m_key, m_ccode = prikey_and_ccode('webauthn', 'seed')
+master_key_index = 0
+master_key = HDKey(keyid=master_key_index.to_bytes(0, 'big'), prikey=m_key, ccode=m_ccode, pubkey=None, is_prikey=True)
+
+# マスターキーは recovery Key から外には出ない
+master_key.print_debug()
+
+# ======== master_key ==========
+# is_prikey: True
+# depth    : 0
+# keyid    : 
+# prikey   : c0efe2a00cfe3d31fe84b0d72366842392fe374730d02dcc50e690284fafa863
+# pubkey   : 323cea14302640267a9db642c9fab532167e5ef64d2b878dd4cb8b09251feb17...
+# credid   : 
+# ccode    : f96fe3c225726a7ee001dcd98349593a76f797ec5cde9abff844cb55ebf9f506
+//}
+
+秘密鍵が含まれていること、ccode が存在することがわかります。
+
+=== Public Key seed の作成
+
+マスターキーから Public Key seed を作成します。
+先ほど拡張公開鍵を作成した方法と同じアルゴリズムで、チェーンコードを含む公開鍵を生成します。
+実際のコードは@<list>{pubkey_seed} です。
+
+//listnum[pubkey_seed][Public Key seed の生成][python]{
+print("======== pubkey_seed ==========")
+pubkey_seed = master_key.pubkey_seed()
+
+pubkey_seed.print_debug()
+# ======== pubkey_seed ==========
+# is_prikey: False
+# depth    : 1
+# keyid    : b66b0b6a66fce126869e3d5042169886a6e832e631350f356bad2f22d026ca62
+# prikey   : None
+# pubkey   : 356cddf81e91cbdeaed452a988c5fd9b4c36e24d5a6b916dc87cb10be239b6e07d3d8da70b0a4c9b32fb83bd5890b70494aca0ab451644494d716f6d176fe2c5
+# credid   : b66b0b6a66fce126869e3d5042169886a6e832e631350f356bad2f22d026ca62
+# ccode    : 0753795ad0c1be808005b008ee6f0d670641eb8c641cd1790cc4e3a0eb815be5
+//}
+
+先ほどの拡張公開鍵を作成した時と異なるのは、keyid というパラメータを生成している点です。
+keyid を生成する際には、ランダムナンスを半分の長さで生成します。ここでは 128bit 長の nonce を加算して新しい公開鍵を生成しています。  @<fn>{random} 
+次に、自身のチェーンコードを利用して nonce から hmac512 を計算し、その先頭 128bit をchecksum として返します。
+そして nonce と checksum を合成したものを keyid として返します。
+
+//footnote[random][ランダムナンスから keyid などを生成するので、ここからは毎回実行結果が変わります。]
+
+
+//listnum[keyid][keyid の生成メソッド][python]{
+class HDKey(object):
+    ...
+    def _checksum(self, source, appid_hash=None):
+        if appid_hash:
+            s = source + appid_hash
+        else:
+            s = source
+        return hmac512(self.ccode, s)[:HALF_KEY_ID_LENGTH]
+
+    def _generateRandomKeyId(self, appid_hash=None):
+        keyid_L = secrets.token_bytes(HALF_KEY_ID_LENGTH)
+        return keyid_L + self._checksum(keyid_L, appid_hash)
+//}
+
+ここで生成した拡張公開鍵は、普段利用している Main Key に保存されます。
+
+=== アプリケーションごとの公開鍵を作成
+
+Main Key は自身を RP に登録する際に、Recovery Key が利用する公開鍵（app_pubkey）を生成し、Extension に含む形でサーバーに送ります。
+@<list>{app_pubkey} は Main Key の内部で、登録時に行われるものだと考えてください。
+
+//listnum[app_pubkey][アプリケーションごとの公開鍵を作成][python]{
+# Main Authenticator の登録時に、リカバリー用のキーが利用予定の公開鍵を作成し、同時に RP に登録する。
+
+print("======== app_pubkey ==========")
+appid = 'https://example.com'
+
+appid_hash = hashlib.sha256(appid.encode()).digest()
+
+app_pubkey=pubkey_seed.app_pubkey(appid_hash)
+
+app_pubkey.print_debug()
+# ======== app_pubkey ==========
+# is_prikey: False
+# depth    : 2
+# keyid    : 5a2e5e1d4616b3f7bf824c27e88d3953d9619d6e6d7df10d74ca14ef47959792
+# prikey   : None
+# pubkey   : fff4ba46d2348c48dbe99bef1c8bf99b6f02513c58562f7f12f8969fb0c6737f...
+# credid   : b66b0b6a66fce126869e3d5042169886a6e832e631350f356bad2f22d026ca62...
+# ccode    : 1a8872c6da749a52bc2f8a3eee8a30c7c985c2e8349185e0c226a32401dfc119
+//}
+
+ここで、credid（WebAuthn の credentialID）は、親の Public Key seed の keyid に自身の keyid を合成したバイト配列です。
+先ほど 128bit の nonce と 128bit の checksum で 256bit の keyid を生成しました。したがって、credid はその 2 倍、512bit の長さになります。 
+
+マスターキーがもつ、秘密鍵とマスターチェーンコードがあれば、keyid から子秘密鍵を生成することが可能です。
+すなわち、credentialID があれば、マスターキーから Public Key seed に対応する秘密鍵が、そして app_pubkey に対応する秘密鍵も生成可能になります。
 
 === CredentialID から秘密鍵を復元
+
+では、credentialID から秘密鍵を復元してみましょう。
+
+Main Key を紛失してしまい、アカウントリカバリーフローが始まったと考えてください。
+サーバーは、リカバリー用に登録されている credentialID を Recovery Key に送信します。
+なお CredentialID は Main Key 上で生成されており、Recovery はマスターキーを持っています。
+
+//listnum[app_prikey][アプリケーションごとの秘密鍵を復元][python]{
+print("======== private key ==========")
+
+prikey = master_key.app_prikey(app_pubkey.credid, appid_hash)
+
+prikey.print_debug()
+
+source = 'nonce'.encode()
+sign = prikey.sign(source)
+result = app_pubkey.verify(sign, source)
+# ======== private key ==========
+# is_prikey: True
+# depth    : 2
+# keyid    : 5a2e5e1d4616b3f7bf824c27e88d3953d9619d6e6d7df10d74ca14ef47959792
+# prikey   : a4f3db3bbde43b46e0878917d42ca362c1d6d8abe598f308f53e70f42c25f6f3
+# pubkey   : fff4ba46d2348c48dbe99bef1c8bf99b6f02513c58562f7f12f8969fb0c6737f...
+# credid   : b66b0b6a66fce126869e3d5042169886a6e832e631350f356bad2f22d026ca62...
+# ccode    : 1a8872c6da749a52bc2f8a3eee8a30c7c985c2e8349185e0c226a32401dfc119
+//}
+
+@<list>{app_prikey} で生成された app_prikey を確認してください。まず、 is_prikey = True であり、秘密鍵を含んでいることが分かります。
+さらに公開鍵が、先ほど生成した app_pubkey の公開鍵 '1a887...' と等しいことが分かるかと思います。
+マスターキーを持っている、Recovery Key 内では、対応する credentialID があれば、秘密鍵を復元することが可能なのです。
+
+@<list>{recovery_prikey} で、もう少し細かく秘密鍵の復元方法を見てみましょう。まずマスターキーは credentialID を受け取ると、その長さをチェックし半分に分割します。
+そして、その前半部分から _child_key_from_id() メソッドで、公開鍵 pubkey_seed に対応する秘密鍵を生成します。
+これは Main Key に送ったアプリケーションの公開鍵を生成する拡張公開鍵に対応する秘密鍵を含んだ HDKey です。
+つまりこの HDKey から、署名用の秘密鍵を生成することが可能です。
+
+次に、credentialID の残りの半分を、署名用の秘密鍵の _child_key_from_id() メソッドに appid_hash と共に渡します。
+このとき、 _child_key_from_id メソッド内では、is_child_key_id() メソッドで、与えられた credentialID と appid_hash が本当に、
+マスターキーから生成されたものかをチェックしています。
+マスターキーで生成された credentialID 意外を指定した場合、 invalid keyid という例外が投げられます。
+
+//listnum[recovery_prikey][秘密鍵の生成コード][python]{
+
+    def app_prikey(self, credid, appid_hash):
+        if not self.is_prikey:
+            raise Exception('this key doesn\'t prikey') 
+
+        if len(credid) == CRED_ID_LENGTH:
+            childkey = self._child_key_from_id(credid[:KEY_ID_LENGTH])
+            prikey = childkey._child_key_from_id(credid[KEY_ID_LENGTH:], appid_hash)
+            return prikey
+        else:
+            return None
+
+    def _child_key_from_id(self, keyid, appid_hash=None):
+        if self.is_child_key_id(keyid, appid_hash):
+            return self._child_key(keyid,include_prikey=self.is_prikey)
+        else:
+            raise Exception('invalid keyid {}'.format(keyid.hex()))
+//}
+
+この credentialID をチェックする機構は YubiKey が credentialID を生成する仕組みを参考に実装しました。
+
+
+=== 署名の検証
+
+では、最後に署名を生成し検証してみます。
+ここで、公開鍵である app_pubkey は RP に、先ほど生成した app_prikey はリカバリー用のキー内部にあると考えてください。
+
+//listnum[verifying][署名の作成と検証][python]{
+source = 'nonce'.encode()
+sign = prikey.sign(source)
+result = app_pubkey.verify(sign, source)
+
+print("========   result   ==========")
+
+print('souce :','nonce')
+print('pubkey:', app_pubkey.pubkey.to_string().hex())
+print('sign  :', sign.hex())
+print('result:', result)
+
+# ========   result   ==========
+# souce : nonce
+# pubkey: fff4ba46d2348c48dbe99bef1c8bf99b6f02513c58562f7f12f8969fb0c6737f313b88224...
+# sign  : bd5e8f09f821240db155ca35935f022e852cd7d06093f62f5b2593331c1248599f1fababa...
+# result: True
+//}
+
+@<list>{verifying} では、'nonce' という文字列に対し、app_prikey で署名を行っています。
+なお、ドラフトでは authenticatorData から、Extensions を除いたものと、clientDataHash を結合したものに対して署名を行っていますが、今回はあくまでコンセプトの説明ですので単純な文字列に対して署名を行いました。
+
+最後の検証では、サーバーに保存されている pubkey を利用して署名を検証できていることが分かります。
+
+このように、リカバリー用のキーは自身が生成する署名用の秘密鍵に対応する公開鍵を、秘密の情報は共有せずに RP と共有することができました。
+また、その秘密鍵を、RP から送られてくる credentialID から復元することができました。
 
 === 考慮事項
 
