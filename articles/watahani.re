@@ -11,15 +11,19 @@ WebAuthn では認証に用いる秘密鍵がデバイスに紐づき、デバ�
 WebAuthn ではプライバシーを担保するために、それぞれのサービスの認証に、異なるキーペアを利用します。
 また Authenticator の ID などのひとつのキーを特定する識別子もありません。
 その為、登録時にユーザーがそれぞれの Authenticator に名前を付ける、あるいはスマートフォンの場合であればユーザーエージェントから名前を取り込むといった運用になるかと思います。
+例えば Google アカウントで新しく Authenticator を登録する際には、@<img>{w-google-seckeys}のように登録デバイスに名前をつけ、どのデバイスを登録したのかをユーザーが理解できるようにしています。
 
-//image[w-services][キーに名前を付けることは可能だが… *Googleのセキュリティーキー一覧画面より][scale=0.5]
+ユーザーがデバイスを紛失した際は、入力した名前などをもとに Authenticator を無効化するといった処理が可能かもしれませんが、単一のサービスではなく、複数のサービスに登録していた場合はどうでしょうか。
+ユーザーがデバイスを紛失してしまうと、なくしたデバイスがどのサービスで利用していたか、あるいは、登録した Authenticator のうち、なくしたデバイスはどれなのかを判断することは、ユーザーから判別することは難しくなります。
 
-単一のサービスであれば、ユーザーがデバイスを紛失した際に、入力した名前などをもとに Authenticator を無効化するといった処理が可能かもしれませんが、複数のサービスに登録していた場合はどうでしょうか。
-ユーザーがデバイスを紛失してしまうと、なくしたデバイスがどのサービスで利用していたかを判断することは、ユーザーから判別することは難しくなります。
+//image[w-google-seckeys][キーに名前を付けることは可能だが… *Googleのセキュリティーキー一覧画面より][scale=0.5]
 
 == アカウントリカバリーの方法
 
-デバイスロスの課題については、よくアカウントのリカバリー方法と共に語られます。
+ユーザーが登録した Authenticator や、サービスが分からなくなることよりも大きな問題があります。
+それはデバイスを紛失した際の、アカウントリカバリーの問題です。
+
+FIDO や WebAuthn において、デバイスロスの課題は、よくアカウントのリカバリー方法と共に語られます。
 当然デバイスを紛失した際には、新しいデバイスに対してユーザーを紐づける、アカウントリカバリーが必要となります。
 しかし安全にアカウントリカバリーを行うにはどうすればいいのでしょうか。
 
@@ -27,15 +31,16 @@ WebAuthn ではプライバシーを担保するために、それぞれのサ�
 したがってサービスのセキュリティを担保するには、アカウントリカバリーの方法も含めて考える必要があります。(当然それだけではありませんが)
 
 その為、サービスが利用ユーザーをいかに正しく確認するかという手続きが必要になってきます。
-KYC(Know Your Customer) と呼ばれ、金融分野では以前からサービスを提供するにあたり重要な考え方だと認識されてきましたが、
-近年、様々な企業がペイメントサービスを提供しはじめ、それに伴い再び注目されることになっているようです。
+KYC（Know Your Customer） と呼ばれ、金融分野では以前からサービスを提供するにあたり重要な考え方だと認識されてきましたが、
+近年、さまざまな企業がペイメントサービスを提供しはじめ、それに伴い再び注目されることになっているようです。
 
-そんな中 WebAuthn の GitHub issue 「Recovering from Device Loss」@<fn>{GitHubIssue} では、デバイスロスについての議論が繰り広げられています。
+しかしながら本書では、アカウントのリカバリーを KYC に頼ることなく、ユーザー自身の力で行えるかもしれない仕様について解説します。
 
 //footnote[GitHubIssue][https://github.com/w3c/webauthn/issues/931]
 
 == Recovery Credentials Extension
 
+WebAuthn の GitHub issue 「Recovering from Device Loss」@<fn>{GitHubIssue} では、デバイスロスについての議論が繰り広げられています。
 その中で Yubico のエンジニアである emlum @<fn>{emlum} が Recovery Crendentials Extension を 疑似スペックのドラフト@<fn>{recovery-extension-draft}
 として公開しています。
 非常に興味深いドラフトだったため、emlum にドラフトの詳細を教えてほしいとコメントしたところ、安全性が確認できる前に実装されてしまうというリスクがあるため、暗号化の専門家による吟味が終わるまではまだ公開するつもりはないという旨の返事が返ってきました。
@@ -48,7 +53,18 @@ KYC(Know Your Customer) と呼ばれ、金融分野では以前からサービ�
 
 === ドラフトの概要
 
-ドラフトでは、Authenticator の登録時に、リカバリー用の Recovery Authenticator の情報を Extension に含め、事前に CredentialId や、公開鍵をサーバーに送信します。
+WebAuthn のスペックには Extension と呼ばれる拡張データが定められています。
+例としては、認証情報に位置情報を含める Location Extension、認証メソッドを判別する User Verification Method Extension、あるいは U2F との互換性のために Client に実装されている FIDO AppID Extension などがあります。
+今回のドラフトでは、recovery Extension という名前の Extension が提案されています。
+これは Authenticator の登録時に、リカバリー用の Recovery Authenticator の情報を Extension に含め、事前に CredentialId や、公開鍵をサーバーに送信し、
+紛失時にキーの再登録なしにリカバリーが可能になるというものです。
+
+主な登場人物は次のとおりです。
+
+ * Recovery Key: リカバリー用の Authenticator です。事前に Main Key に登録しておきます。
+ * Main Key: 普段利用している Authenticator で、今回紛失します。RP への登録処理時にリカバリーキーの情報も登録します。
+ * RP: 認証を行うサービス提供者です。Main Key と Recovery Key の公開鍵を保存し、通常は Main Key で登録します。
+
 登録時の流れとしては、次のようになります。
 
  1. 事前に Recovery Authenticator を、Main Authenticator に登録 （登録処理のたびに state をインクリメント）
@@ -61,7 +77,8 @@ KYC(Know Your Customer) と呼ばれ、金融分野では以前からサービ�
 
 //image[w-registration][Recovery Authenticator の登録]
 
-次にリカバリーの流れです。想定としては、通常は「キーの紛失」リンクから、メールアドレスを入力しサービスから送信されるリカバリーフローへのリンクから開始することになるかと思います。
+次にリカバリーの流れです。
+想定としては、通常は「キーの紛失」リンクから、メールアドレスを入力しサービスから送信されるリカバリーフローへのリンクから開始することになるかと思います。
 
  1. サーバーはどの Authenticator をリカバリするかをユーザーに選択させる画面を表示し、ユーザーはなくした Authenticator を選択
  2. サーバーはなくした Authenticator に紐づけられている recovery Credentials のリストを Extension に含めて送信
@@ -75,12 +92,15 @@ KYC(Know Your Customer) と呼ばれ、金融分野では以前からサービ�
 === 技術課題
 
 ドラフトの概要を見るとよくできたプロトコルのように思えます。
-ユーザーは事前にリカバリー用の Authenticator を登録しておけば、デバイスを無くした際に、追加の認証をすることなくまるでパスワードの再設定のようにリカバリー処理を行います。
+ユーザーは事前にリカバリー用の Authenticator を登録しておくことで、デバイスを無くした際に、追加の認証をすることなくデバイスのリカバリー処理を行います。
+まるでパスワードの再設定のように、デバイスの再設定が可能になるのです。
 さらに、リカバリーを行った場合には古いデバイスは自動で削除されるため、デバイスの無効化も同時に行えます。
 
 しかしちょっと待ってください。リカバリー用の Authenticator を登録するとはどういうことでしょうか。
+WebAuthn のスペックを理解している方なら、リカバリー用の Authenticator を登録するにはいくつかの問題があると想像がつくでしょう。
 
-本題に入る前に、なぜ WebAuthn の Authenticator のバックアップが困難なのかをあらためて確認しましょう。
+リカバリー用の Authenticator を登録するにはどうすればよいのか、
+本題に入る前に、なぜ WebAuthn の Authenticator のバックアップが困難なのかを、あらためて確認しておきましょう。
 
 ==== 秘密鍵はデバイスの中に
 
@@ -112,14 +132,21 @@ Authenticator のバックアップが難しいことが分かったところで
 
 #@# TODO キーの紹介
 ===[column]  Ledger Nano S の紹介
-Ledger Nano S は、HDウォレットを実装しているビットコインウォレットの一つです。
+Ledger Nano S は、HDウォレットを実装しているビットコインウォレットのひとつです。
 ビットコインやイーサリアムといった仮想通貨のウォレットとしてだけではなく、FIDO U2F のキーとしても動作します。
 面白いことに、HDウォレットの仕組みから、ある seed をもとに Authenticator のリストアが可能です。
 U2F のキーについても、 seed さえ忘れなければ同じキーが復元可能です。
-安全性はともかく、面白い仕組みと言えるでしょう。
+Authenticator としてみた場合にも、とても面白い仕組みといえるでしょう。（安全性に関する議論はここでは触れません。）
+
+本作を書くにあたり、この HD ウォレットの仕組みが非常に参考になりました。
 #@# もっとも筆者はバックアップが可能であることが、悪だとは考えておりません。
 #@# 世の中にはバックアップ可能な FIDO デバイスも存在しており、今回のアカウントリカバリーの方法は、そのデバイスの仕組みが大きなヒントになりました。
 ===[/column]
+
+結論からいうと、この HD ウォレットの仕組みが Authenticator のリカバリープロトコルに利用できると考えています。
+つまり、「秘密鍵がなくとも、アプリケーションごとの公開鍵を生成できる」仕組みを HD ウォレットは備えているのです。
+
+その為、この章では、HD ウォレットの仕組みについて少し解説していきます。
 
 HD ウォレットは BIP0032@<fn>{BIP0032} で定義されているビットコインのウォレット管理プロトコルです。
 HD ウォレットは Hierarchical Deterministic（階層的決定性）ウォレットの略で、ひとつのシードから複数の秘密鍵を作成できるのですが、階層的決定性とあるように階層的に秘密鍵を生成できます。
@@ -132,10 +159,6 @@ HD ウォレットは Hierarchical Deterministic（階層的決定性）ウォ�
 
 //footnote[hierarchical][bitcoin ウォレットのプロトコルでは、マスターキーを @<i>{m} ,そこの子を @<i>{m/x}, その子を @<i>{m/x/y} と呼ぶため、本書でもそのように呼称します。]
 
-結論からいうと、この HD ウォレットの仕組みが Authenticator のリカバリープロトコルに利用できると考えています。
-つまり、「秘密鍵がなくとも、アプリケーションごとの公開鍵を生成できる」仕組みを HD ウォレットは備えているのです。
-
-その為、この章では、HD ウォレットの仕組みについて少し解説していきます。
 
 === 楕円曲線暗号の数学的性質
 
@@ -499,18 +522,18 @@ print("m/0/1 ccode :", m_0_1_ccode.hex())
 では実際に WebAuthn で利用できるバックアップ Authenticator を作成してみましょう。
 コードの全体は GitHub を参照ください。
 
-//listnum[hdkey][HD Authenticator のサンプルコード][python]{
+//listnum[hdkey][HD Authenticator のサンプルコード 重要な関数のみ抽出][python]{
 class HDKey(object):
     ''' extended key '''
-    def __init__(self,keyid, prikey, ccode, pubkey, is_prikey, parentId=None, depth=0):...
+    #@# def __init__(self,keyid, prikey, ccode, pubkey, is_prikey, parentId=None, depth=0):...
 
-    def _checksum(self, source, appid_hash=None):...
+    #@# def _checksum(self, source, appid_hash=None):...
 
-    def _generateRandomKeyId(self, appid_hash=None):...
+    #@# def _generateRandomKeyId(self, appid_hash=None):...
 
-    def _child_key_from_id(self, keyid, appid_hash=None):...
+    #@# def _child_key_from_id(self, keyid, appid_hash=None):...
 
-    def sign(self, source):...
+    #@# def sign(self, source):...
 
     def app_prikey(self, credid, appid_hash):
         if not self.is_prikey:
@@ -543,9 +566,23 @@ class HDKey(object):
         return keyid_R == self._checksum(keyid_L, appid_hash=appid_hash)
 //}
 
-HDKey は Authenticator 内のキージェネレーターだと考えてください。
-HDKey は
-このコードでは、先ほどの拡張公開鍵のしくみを利用して
+HDKey@<list>{hdkey} は Authenticator 内のキージェネレーターだと考えてください。
+HDKey は sign() メソッドと verify() メソッドがあり、署名と署名の検証が可能です。
+
+また HDウォレットのキー同様、HDKey 自身から階層的にキーペア（あるいは公開鍵）を生成可能です。今回は WebAuthn の recovery Extensions で利用できるように 3つの関数を定義しました。
+
+pubkey_seed() は、マスターキーから公開鍵を生成する pubkey_seed （公開鍵シード）を作成します。pubkey_seed は「秘密鍵は含まないが、その子公開鍵を生成できる」、HD ウォレットでいう拡張公開鍵です。
+app_pubkey() は公開鍵シードから各アプリケーションごとの公開鍵を生成する関数です。引数には appid_hash を指定します。
+
+appid_hash は keyid と共に pubkey_seed のチェーンコードをキーとして HMAC を生成し、credentialID に含めて出力しています。credentialID に appid_hash を含めて HMAC をとった値が入っていることにより、
+この後 Master Key と credentialID から秘密鍵を復元する際、credentialID と appid の検証に利用します。
+
+最後に app_prikey() は WebAuthn の credentialID から、秘密鍵を含むアプリケーションごとの HDKey を生成します。
+この際引数に appid_hash を同時に渡すことで CredentialID が本当にこの HDKey で生成されたものかを判別します。
+
+全体的な流れは @<img>{w-hdkey_flow} のようになります。
+
+//image[w-hdkey_flow][HDKey クラスによる recovery フロー]
 
 ===　Public Key seed の作成
 
