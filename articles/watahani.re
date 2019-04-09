@@ -41,15 +41,15 @@ KYC（Know Your Customer） と呼ばれ、金融分野では以前からサー�
 == Recovery Credentials Extension
 
 WebAuthn の GitHub issue 「Recovering from Device Loss」@<fn>{GitHubIssue} では、デバイスロスについての議論が繰り広げられています。
-その中で Yubico のエンジニアである emlum @<fn>{emlum} が Recovery Crendentials Extension を 疑似スペックのドラフト@<fn>{recovery-extension-draft}
+その中で Yubico のエンジニアである emlun @<fn>{emlun} が Recovery Crendentials Extension を 疑似スペックのドラフト@<fn>{recovery-extension-draft}
 として公開しています。
-非常に興味深いドラフトだったため、emlum にドラフトの詳細を教えてほしいとコメントしたところ、安全性が確認できる前に実装されてしまうというリスクがあるため、暗号化の専門家による吟味が終わるまではまだ公開するつもりはないという旨の返事が返ってきました。
+非常に興味深いドラフトだったため、emlun にドラフトの詳細を教えてほしいとコメントしたところ、安全性が確認できる前に実装されてしまうというリスクがあるため、暗号化の専門家による吟味が終わるまではまだ公開するつもりはないという旨の返事が返ってきました。
 
 と、いうことで、公開するつもりがないならしょうがないので、自分で想像して書いてみました、というのが今回のテーマです。
 
 //footnote[recovery-extension-draft][Pseudo-spec draft: https://gist.github.com/emlun/74a4d8bf53fd760a5c5408b418875e2b]
 
-//footnote[emlum][emlum@Yubico https://gist.github.com/emlun]
+//footnote[emlun][emlun@Yubico https://gist.github.com/emlun]
 
 === ドラフトの概要
 
