@@ -1,12 +1,11 @@
 PREDEF:
   - preface.re
 
-# 順番は考える
 CHAPS:
-  - watahani.re
   - corocn.re
   - webauthn-lib-responsibility.re
   - super_reader.re
+  - watahani.re
 
 APPENDIX:
 
