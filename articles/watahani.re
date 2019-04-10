@@ -65,12 +65,12 @@ WebAuthn のスペックには Extension と呼ばれる拡張データが定め
  * Main Key: 普段利用している Authenticator で、今回紛失します。RP への登録処理時にリカバリーキーの情報も登録します。
  * RP: 認証を行うサービス提供者です。Main Key と Recovery Key の公開鍵を保存し、通常は Main Key で登録します。
 
-登録時の流れとしては、次のようになります。
+登録時の流れとしては、次のようになります。Main Key はすでに RP に登録されており、認証フローと同時に登録が行える仕様です。
 
  1. 事前に Recovery Key を、Main Key に登録 （登録処理のたびに state をインクリメント）
- 2. Client の credentials.create() コマンドに、"recovery" Extension を action = generate で実行
- 3. Client は通常の登録フローに加え、 Recovery Credential の id, 公開鍵, state をサーバーに送信
- 4. 通常の登録処理に加え、recovery Extension に含まれる Recovery Credential のリストをサーバーに保存  @<fn>{recovery_cred_save_with_main_auth} 
+ 2. Client の credentials.get() コマンドに、"recovery" Extension を action = generate で実行
+ 3. Client は通常の認証フローに加え、 Recovery Credential の id, 公開鍵, state をサーバーに送信
+ 4. 通常の認証処理に加え、recovery Extension に含まれる Recovery Credential のリストをサーバーに保存  @<fn>{recovery_cred_save_with_main_auth} 
 
 
 //footnote[recovery_cred_save_with_main_auth][リカバリー用の Credential はメインの Authenticator に紐づいて保存される]
@@ -79,6 +79,7 @@ WebAuthn のスペックには Extension と呼ばれる拡張データが定め
 
 次にリカバリーの流れです。
 想定としては、通常は「キーの紛失」リンクから、メールアドレスを入力しサービスから送信されるリカバリーフローへのリンクから開始することになるかと思います。
+キーの登録フローと同時に、リカバリーが行える仕様です。
 
  1. サーバーはどの Authenticator をリカバリーするかをユーザーに選択させる画面を表示し、ユーザーはなくした Authenticator を選択
  2. サーバーはなくした Authenticator に紐づけられている recovery Credentials のリストを Extension に含めて送信
@@ -778,6 +779,7 @@ print('result:', result)
 
 @<list>{verifying} では、'nonce' という文字列に対し、app_prikey で署名を行っています。
 なお、ドラフトでは authenticatorData から、Extensions を除いたものと、clientDataHash を結合したものに対して署名を行っていますが、今回はあくまでコンセプトの説明ですので単純な文字列に対して署名を行いました。
+同様に state パラメーターについても省略しています。
 
 最後の検証では、サーバーに保存されている pubkey を利用して署名を検証できていることが分かります。
 
@@ -786,7 +788,29 @@ print('result:', result)
 
 === 考慮事項
 
-以上で recovery Extension の解説は終わります。スペックには、バックアップキーを複数登録する際に
+以上で recovery Extension の解説は終わります。
+HD ウォレットの拡張公開鍵を利用することで、 recovery Extension が実現できそうだということがわかりました。
+しかし、いくつか考慮すべき点が存在します。
+
+==== 安全性
+
+これは、emlun が GitHub の issue でも述べている通り、暗号的な安全性を満たしているかという問題です。少なくとも私が書いたサンプルコードには大量の脆弱性があるはずですが、実際に emlun が検討しているプロトコルの実装でも、暗号的な安全性は十分に検討されるべきです。
+たとえば、攻撃者のリカバリーキーを意図せず登録されてしまうような攻撃が成立しないかなど、検討すべきことは多くあると考えています。
+
+また、今回のサンプルでは、公開鍵のシードは少なくともリカバリーキーを登録するデバイスには登録され、外部に漏れることになります。このことがどのような危険を生むのかについては十分な議論が必要です。
+
+==== リカバリーキーの登録方法
+
+リカバリーキーの登録方法については、デバイスメーカーが独自に実装するのでしょうか。その場合、ユーザーはリカバリー用のデバイスを購入するために、ベンダーロックインされることになります。
+ユーザーとしてはあまりうれしいことではありません。
+とはいえ、デバイス同士のプロトコルを標準化するには、少しマニアックな仕様ではないか、とも思います。今後デバイスメーカーがこの仕様に対し、どの程度コミットしていくのかは注目していきたいです。
+
+==== リカバリーキーの紛失
+
+リカバリーキーをメインのキーに登録した後に、リカバリーキーを無くしてしまった場合、この仕様ではリカバリーキーを無効化する方法がありません。
+とはいえ、
+
+====
 
 == 活用例
 
