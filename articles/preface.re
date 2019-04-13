@@ -18,6 +18,7 @@
 なお、本書籍を購入いただいた方は、次の URL から無料でダウンロードいただけます。
 
 #@#  * @<href>{http://bit.ly/WebAuthn-Tech-Book}
+//image[circle-layout][え-08 です]
 
 == 参考
 
