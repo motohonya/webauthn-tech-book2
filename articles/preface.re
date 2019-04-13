@@ -17,20 +17,20 @@
 
 なお、本書籍を購入いただいた方は、次の URL から無料でダウンロードいただけます。
 
- * @<href>{http://bit.ly/WebAuthn-Tech-Book,http://bit.ly/WebAuthn-Tech-Book}
+ * @<href>{http://bit.ly/WebAuthn-Tech-Book}
 
 == 参考
 
 参考サイトは、各コラムの中で紹介はされているとは思いますが、FIDO Alliance のエバンジェリストである Yuriy が、まとめている参考サイトリストが GitHub で公開されています。
 
- * @<href>{https://github.com/herrjemand/awesome-webauthn/blob/master/README.md, https://github.com/herrjemand/awesome-webauthn/blob/master/README.md}
+ * @<href>{https://github.com/herrjemand/awesome-webauthn/blob/master/README.md}
 
 日本語のサイトについても多くまとめられており、非常に参考になります。
 また、Yuriy 自身のブログも大変参考になり、必読です。
 
 そのほか、著者が運営している fido2-workshop コミュニティでは、定期的に勉強会などを開催しています。
 
- * @<href>{https://fido2-workshop.connpass.com/,https://fido2-workshop.connpass.com/}
+ * @<href>{https://fido2-workshop.connpass.com/}
 
 ご興味があれば、ぜひ参加してみてください。
 

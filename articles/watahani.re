@@ -50,7 +50,7 @@ KYC（Know Your Customer） と呼ばれ、金融分野では以前からサー�
 
 しかしながら本書では、アカウントのリカバリーを KYC に頼ることなく、ユーザー自身の力で行えるかもしれない仕様について解説します。
 
-//footnote[GitHubIssue][https://github.com/w3c/webauthn/issues/931]
+//footnote[GitHubIssue][@<href>{https://github.com/w3c/webauthn/issues/931}]
 
 == Recovery Credentials Extension
 
@@ -61,9 +61,9 @@ WebAuthn の GitHub issue 「Recovering from Device Loss」@<fn>{GitHubIssue} �
 
 と、いうことで、公開するつもりがないならしょうがないので、自分で想像して書いてみました、というのが今回のテーマです。
 
-//footnote[recovery-extension-draft][Pseudo-spec draft: https://gist.github.com/emlun/74a4d8bf53fd760a5c5408b418875e2b]
+//footnote[recovery-extension-draft][Pseudo-spec draft: @<href>{https://gist.github.com/emlun/74a4d8bf53fd760a5c5408b418875e2b}]
 
-//footnote[emlun][emlun@Yubico https://gist.github.com/emlun]
+//footnote[emlun][emlun@Yubico @<href>{https://gist.github.com/emlun}]
 
 === ドラフトの概要
 
@@ -82,9 +82,9 @@ WebAuthn のスペックには Extension と呼ばれる拡張データが定め
 登録時の流れとしては、次のようになります。Recovery Key も同時に登録します。
 
  1. 事前に Recovery Key を、Main Key に登録 （登録処理のたびに state をインクリメント）
- 2. Client の credentials.get() コマンドに、"recovery" Extension を action = generate で実行
+ 2. Client の credentials.get() API に、"recovery" Extension を action = generate で実行
  3. Client は通常の認証フローに加え、 Recovery Credential の id, 公開鍵, state をサーバーに送信
- 4. 通常の認証処理に加え、recovery Extension に含まれる Recovery Credential のリストをサーバーに保存  @<fn>{recovery_cred_save_with_main_auth} 
+ 4. 通常の認証処理に加え、recovery Extension に含まれる recovery Credential のリストをサーバーに保存  @<fn>{recovery_cred_save_with_main_auth} 
 
 
 //footnote[recovery_cred_save_with_main_auth][リカバリー用の Credential はメインの Authenticator に紐づいて保存される]
@@ -96,7 +96,7 @@ WebAuthn のスペックには Extension と呼ばれる拡張データが定め
 
  1. サーバーはどの Authenticator をリカバリーするかをユーザーに選択させる画面を表示し、ユーザーはなくした Authenticator を選択
  2. サーバーはなくした Authenticator に紐づけられている recovery Credentials のリストを Extension に含めて送信
- 3. Client は credentials.create() コマンドを recovery Extension の action = "recover", allowCredentials = [ recovery credential] で実行
+ 3. Client は credentials.create() コマンドを recovery Extension の action = "recover", allowCredentials = [recovery credential] で実行
  4. リカバリー用の Authenticator は allowCredentials に自身の CredentialId が含まれていれば、対応する秘密鍵で署名を返す
  5. サーバーは公開鍵で署名を検証し、検証が完了すれば Recovery 用の Authenticator の情報を通常の Authenticator としてユーザーに紐づける
  6. なくした Authenticator を無効化
@@ -169,7 +169,7 @@ HD ウォレットは Hierarchical Deterministic（階層的決定性）ウォ�
 //image[w-hd][階層的な鍵生成] 
 
 
-//footnote[BIP0032][https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki]
+//footnote[BIP0032][@<href>{https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki}]
 
 //footnote[hierarchical][bitcoin ウォレットのプロトコルでは、マスターキーを @<i>{m} ,そこの子を @<i>{m/x}, その子を @<i>{m/x/y} と表記します]
 
@@ -225,7 +225,7 @@ HD ウォレットについて理解するには、少しばかり楕円曲線�
 では実際に ECDSA を利用してみましょう。
 今回のサンプルコードはすべて python3 で記述されています。なお、すべてのコードは GitHub @<fn>{samplecode} にアップロードしていますので適宜参考にしてください。 @<fn>{note} 
 
-//footnote[samplecode][https://www.github.com/watahani/hd-authenticator]
+//footnote[samplecode][@<href>{https://www.github.com/watahani/hd-authenticator}]
 
 //footnote[note][しばらくサンプルコードが続きますが、ひとつのファイルである前提です。]
 
