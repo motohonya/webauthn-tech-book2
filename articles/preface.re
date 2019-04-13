@@ -17,7 +17,7 @@
 
 なお、本書籍を購入いただいた方は、次の URL から無料でダウンロードいただけます。
 
- * @<href>{http://bit.ly/WebAuthn-Tech-Book}
+#@#  * @<href>{http://bit.ly/WebAuthn-Tech-Book}
 
 == 参考
 
