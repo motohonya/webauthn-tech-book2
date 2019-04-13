@@ -14,8 +14,8 @@ OSSでも、WebAuthn認証を実現するためのライブラリが各言語毎
 
 まずはWebAuthnのユーザー登録・認証フローをおさらいしましょう。ここでは概要レベルの説明にとどめますので、
 より詳しい説明が必要な方はYahooの合路さんによる「FIDO認証によるパスワードレスログイン実装入門」
-（ https://www.slideshare.net/techblogyahoo/fido-124019677 ）や、DUO SecurityによるWebAuthn.guide
-(https://webauthn.guide/) など、より詳細に説明した資料を参照して下さい。
+（@<href>{https://www.slideshare.net/techblogyahoo/fido-124019677,https://www.slideshare.net/techblogyahoo/fido-124019677}）や、DUO SecurityによるWebAuthn.guide
+(@<href>{https://webauthn.guide/,https://webauthn.guide/}) など、より詳細に説明した資料を参照して下さい。
 
 === ユーザー登録
 
@@ -28,11 +28,11 @@ AuthenticatorにCredential（公開鍵）の生成を要求するにあたって
 ブラウザ上で動作するサイトのフロントエンドアプリケーションだけで決定できるものだけでなく、ChallengeやUserHandleなど、
 サイトのサーバーサイドアプリケーション側で決定すべき値もあります。そのため、WebAuthnのユーザー登録フローは、
 
-# サーバーサイドでWebAuthnのパラメータ値の生成、フロントエンドへの引き渡し
-# フロントエンドでWebAuthn JS Credential（公開鍵）生成APIの呼出
-# 生成されたCredential（公開鍵）をサーバーサイドに送信
-# サーバーサイドでCredential（公開鍵）を検証
-# 問題がなければユーザーに紐づけて登録
+ 1. サーバーサイドでWebAuthnのパラメータ値の生成、フロントエンドへの引き渡し
+ 2. フロントエンドでWebAuthn JS Credential（公開鍵）生成APIの呼出
+ 3. 生成されたCredential（公開鍵）をサーバーサイドに送信
+ 4. サーバーサイドでCredential（公開鍵）を検証
+ 5. 問題がなければユーザーに紐づけて登録
 
 という流れになります。
 
@@ -46,12 +46,12 @@ WebAuthnを使用するサイト（Relying Party）はAuthenticatorにCredential
 ブラウザ（Client Platform）のWebAuthn JS APIを呼び出します。この呼び出しに際して、WebAuthnのセキュリティを実現するための
 パラメータが色々必要であり、WebAuthnのユーザー検証フローは、
 
-# サーバーサイドでWebAuthnのパラメータ値の生成、フロントエンド側への引き渡し
-# フロントエンドアプリケーションでWebAuthn JS Credential（署名）取得APIの呼び出し
-# 取得されたCredential（署名）をサーバーサイドに送信
-# サーバーサイドでCredential（署名）を検証
-# 問題がなければユーザー認証成功
-# ログインカウンタの更新
+ 1. サーバーサイドでWebAuthnのパラメータ値の生成、フロントエンド側への引き渡し
+ 2. フロントエンドアプリケーションでWebAuthn JS Credential（署名）取得APIの呼び出し
+ 3. 取得されたCredential（署名）をサーバーサイドに送信
+ 4. サーバーサイドでCredential（署名）を検証
+ 5. 問題がなければユーザー認証成功
+ 6. ログインカウンタの更新
 
 という流れになります。
 

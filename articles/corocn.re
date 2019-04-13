@@ -14,7 +14,7 @@ FIDO2、WebAuthnが何者なのかという説明は、書きたいことの本�
 もし復習しておきたいという方は、@agektmr 氏の
 「パスワードの不要な世界はいかにして実現されるのか - FIDO2 と WebAuthn の基本を知る」@<fn>{agektmr_fido_document}が非常によくまとまっているのでオススメでした。
 
-//footnote[agektmr_fido_document][パスワードの不要な世界はいかにして実現されるのか - FIDO2 と WebAuthn の基本を知る： https://blog.agektmr.com/2019/03/fido-webauthn.html ]
+//footnote[agektmr_fido_document][パスワードの不要な世界はいかにして実現されるのか - FIDO2 と WebAuthn の基本を知る： @<href>{https://blog.agektmr.com/2019/03/fido-webauthn.html} ]
 
 ==[column] パスワードレス認証を実装する必要があるのか
 
@@ -54,7 +54,7 @@ SPA + APIの構成でやっている例が見当たらなかったのでトラ�
 
 サンプルコードは次に置いておきます。モノレポでfrontディレクトリ配下にNuxt.jsを格納しています。
 
- * https://github.com/corocn/webauthn-rails-playground
+ * @<href>{https://github.com/corocn/webauthn-rails-playground}
 
 == 実装のポイント
 
@@ -84,21 +84,21 @@ SPA + APIの構成でやっている例が見当たらなかったのでトラ�
 FIDO Allianceは「Server Requirements and Transport Binding Profile」@<fn>{server_requirements}という文書を公開しており、
 この中にAPIのパスやリクエストの形式まで詳細に書いてあるので、こちらに沿って実装していくと取り回しがしやすくなると思います。
 
-//footnote[server_requirements][Server Requirements and Transport Binding Profile： https://fidoalliance.org/specs/fido-v2.0-rd-20180702/fido-server-v2.0-rd-20180702.html ]
+//footnote[server_requirements][Server Requirements and Transport Binding Profile： @<href>{https://fidoalliance.org/specs/fido-v2.0-rd-20180702/fido-server-v2.0-rd-20180702.html} ]
 
 
 この文書は「This document contains a non-normative, proposed REST API for FIDO2 servers.」と記載されているので、仕様というより提案のようです。
 
 FIDOには「Conformance Self‐Validation Testing」@<fn>{conformance_testing}と呼ばれるテストツールが存在して、仕様に準拠してるかを網羅的にテストしてくれます。サーバーを開発するときはこのテストツールに沿って開発をすると良いでしょう。
 
-//footnote[conformance_testing][Conformance Self‐Validation Testing： https://fidoalliance.org/certification/functional-certification/conformance/ ]
+//footnote[conformance_testing][Conformance Self‐Validation Testing： @<href>{https://fidoalliance.org/certification/functional-certification/conformance/} ]
 
 この提案書は、主にこのConformance Toolに向けた文書らしいのですが、2019/04段階ではReview Draftとなっています。多少情報が古くて最新仕様に追従されていないので、本来のリクエスト/レスポンスの形式を確認するときは、大本の仕様を確認してください。"requireResidentKey" が "residentKey" になっていたりしました。
 
 このテストツールはまだベータ版です。エラーメッセージが間違っていたりとまだまだバグがあるようですが、issueの管理がGitHubで行われている@<fn>{conformance_tools_issue}ので、問題を見つけたらissueを書いていきましょう。
 先日もツールに関するバグを見つけて起票したところ、FIDOエヴァンジェリストのYuriyが見つけてサッとfixしてくれました。
 
-//footnote[conformance_tools_issue][Conformance Tools Issues： https://github.com/fido-alliance/conformance-tools-issues ]
+//footnote[conformance_tools_issue][Conformance Tools Issues： @<href>{https://github.com/fido-alliance/conformance-tools-issues} ]
 
 == コントローラ設計
 
@@ -106,7 +106,7 @@ Railsでコントローラを実装する時は、DHH流の書き方で実装し
 DHH流の書き方を知らない場合は「DHHはどのようにRailsのコントローラを書くのか」を読んでください。
 
 
-//footnote[dhh_controller][DHHはどのようにRailsのコントローラを書くのか： https://postd.cc/how-dhh-organizes-his-rails-controllers/ ]
+//footnote[dhh_controller][DHHはどのようにRailsのコントローラを書くのか： @<href>{https://postd.cc/how-dhh-organizes-his-rails-controllers/} ]
 
 私が見てきた多くのRailsアプリケーションでは、認証処理をセッションを作成すると読み替えて、
 SessionsController#create で行っていました。これは/sessionsに対するPOSTリクエストになります。
@@ -260,7 +260,7 @@ end
 検証部分はWebAuthn Gem@<fn>{webauthn_gem}にゴリゴリに依存しているのですが、
 WebAuthn Gemのメソッドで作成できるオプションでは不足しているので一部上書きします。
 
-//footnote[webauthn_gem][WebAuthn ruby library： https://github.com/cedarcode/webauthn-ruby ]
+//footnote[webauthn_gem][WebAuthn ruby library： @<href>{https://github.com/cedarcode/webauthn-ruby} ]
 
 //listnum[attestation_option_build_option][Attestation/オプションの初期化]{
 def create
