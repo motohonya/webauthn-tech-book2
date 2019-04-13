@@ -12,9 +12,10 @@
 簡単にはなりますがそれぞれの仕様がどのように関連しているのかを解説したいと思います。
 
 今回解説したい題材はこちらになります。
- 1. OpenID ConnectにとってのFIDOとは？
- 2. FIDOとOpenID ConnectでのRelying Partyについて
- 3. FIDOとSelf-issuedについて
+
+ * OpenID ConnectにとってのFIDOとは？
+ * FIDOとOpenID ConnectでのRelying Partyについて
+ * FIDOとSelf-issuedについて
 
 それではさっそくFIDOとOpenID Connectの関係を見てみましょう。
 
@@ -25,7 +26,7 @@ ID連携とは連携先のサービス(Relying Party)に対して、IDやパス�
 ユーザーの認証情報を提供して、OpenId Providerに保存されているユーザーデータ（属性情報）にアクセスしたり、
 SingleSingOnを実現することが可能になる仕組みを指します。
 ID連携の仕様の一つであるOpenID Connectはユーザー認証情報を含む改ざん検知用の署名付きID Tokenを発行し、
-ユーザーのセッション管理を行ったり、認可用のRefresh TokenやAccess Tokenの発行などに関する仕様です。
+ユーザーのセッション管理を行ったり、認可用のトークンの発行などに関する仕様です。
 現在ではさまざまなRelying Partyが存在しており、OpenID Providerと連携をしながらサービスを展開しています。
 また、OpenId Providerは認証と認可の機能、そして、サービスがほしい属性情報を持っているサービスになります。
 実際の企業でいいますとGoogleやYahoo! JAPAN、LINEなどのID Providerを指します。
@@ -84,8 +85,10 @@ Yahoo!ID連携の画面フローをもとにどのような処理が行われて
 Yahoo! JAPANのログインボタンを押すことでID連携がスタートします。
 //image[yahoo_fido_1][RPのID連携ボタンがある画面][scale=0.5]
 
-まずはOpenId Provider側の認証を行う必要があります。@<img>{yahoo_fido_2}はOpenId ProviderであるYahoo! JAPANのログイン画面です。未ログイン状態からログインするためにIDを入力して、「次へ」ボタンを押します。
+まずはOpenId Provider側の認証を行う必要があります。@<img>{yahoo_fido_2}はOpenId ProviderであるYahoo! JAPANのログイン画面です。
+未ログイン状態からログインするためにIDを入力して「次へ」ボタンを押します。
 ここで使用するアカウントはすでにWebAuthnでの登録フローが完了しているアカウントになります。
+(すでにYahoo! JAPANI IDでログイン済みのブラウザを使っている場合はIDを入力する必要はなく、そのまま@<img>{yahoo_fido_3}に飛びます)
 //image[yahoo_fido_2][OpenId Providerのログイン画面][scale=0.5]
 
 「次へ」ボタンが押された瞬間に裏側ではchallengeの要求が走り、サーバーからはchallengeを含んだ必要なoptionsが返却されます。
@@ -104,7 +107,7 @@ Yahoo! JAPANのログインボタンを押すことでID連携がスタートし
 //image[yahoo_fido_4][RPに対してどのような属性情報を渡すのかの同意画面][scale=0.5]
 
 属性情報の同意が取れましたら、裏では@<img>{fido_in_oidc}のように認可コードが格好された後、各種Tokenが払い出され、Access Tokenを使用して属性情報を取得します。
-そして、取得された属性情報はヤマト運輸(Relying Party)に渡されます。
+そして、取得された属性情報はRP(ヤマト運輸)に渡されます。
 モザイクばかりになってしまいましたが、処理が進むと@<img>{yahoo_fido_5}のように登録画面にOpenId Provider(Yahoo! JAPAN)に保存されていた属性情報が埋め込まれた登録画面が現れます。
 
 //image[yahoo_fido_5][RPの登録時に属性情報がプリセットされている画面][scale=0.7]
@@ -112,7 +115,6 @@ Yahoo! JAPANのログインボタンを押すことでID連携がスタートし
 このようにID連携をすることで事前に必要な情報を取得することができ、ユーザーが登録をしやすいような土台をRP(ヤマト運輸)はユーザーに提供することができます。
 
 以上の具体例からもOpenID ConnectとFIDOは共存することが可能であることがわかります。
-
 
 == FIDOとOpenID ConnectでのRelying Partyについて
 私がFIDOを一番最初に学んだときに一番最初に引っかかった部分がここでした。
@@ -190,7 +192,7 @@ Self-issuedはあくまでID連携から派生した仕様であり、基本的�
 
 なので、FIDOとSelf-issuedに関して簡単に言ってしまうと
 //lead{
-手段は一緒だけど、そもそもの目的が違う
+@<b>{手段は一緒だけど、そもそもの目的が違う}
 //}
 だと思われます。
 
