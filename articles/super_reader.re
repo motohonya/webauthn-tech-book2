@@ -21,28 +21,34 @@
 == OpenID ConnectにとってのFIDOとは？
 まずはOpenID Connectについて簡単に説明したいと思います。
 @<br>{}OpenID ConnectはID連携の仕様の一つです。
-ID連携とは連携先のサービス(Relying Party)に対して、IDやパスワードを渡すことなく、ユーザーの認証情報を提供して、OpenId Providerに保存されているユーザーデータ（属性情報）にアクセスすることが可能になる仕組みのことを指します。
-ID連携の仕様の一つであるOpenID Connectは現在さまざまなサービスで使われている仕様です。
+ID連携とは連携先のサービス(Relying Party)に対して、IDやパスワードを渡すことなく、
+ユーザーの認証情報を提供して、OpenId Providerに保存されているユーザーデータ（属性情報）にアクセスしたり、
+SingleSingOnを実現することが可能になる仕組みを指します。
+ID連携の仕様の一つであるOpenID Connectはユーザー認証情報を含む改ざん検知用の署名付きID Tokenを発行し、
+ユーザーのセッション管理を行ったり、認可用のRefresh TokenやAccess Tokenの発行などに関する仕様です。
+現在ではさまざまなRelying Partyが存在しており、OpenID Providerと連携をしながらサービスを展開しています。
 また、OpenId Providerは認証と認可の機能、そして、サービスがほしい属性情報を持っているサービスになります。
 実際の企業でいいますとGoogleやYahoo! JAPAN、LINEなどのID Providerを指します。
 
-簡単にOpenID Connectに関して説明をさせていただきましたが、細かな仕様のここでの説明は割愛させていただきます。
+簡単にOpenID Connectに関して説明をさせていただきましたが、細かな仕様の説明は割愛させていただきます。
 
 その代わりにOpenID Connectの理解に役立ちそうなサイトを記載させていただきます。
 
  * @<href>{https://qiita.com/TakahikoKawasaki/items/498ca08bbfcc341691fe,一番分かりやすい OpenID Connect の説明}
- * @<href>{https://speakerdeck.com/nov/oauth-2-dot-0-and-openid-connect-ji-chu-at-openid-meetup-fukuoka,OAuth2.0 & OpenID Connect基礎}
  * @<href>{https://www.slideshare.net/kura_lab/openid-connect-id,OpenID Connnect入門}
+ * @<href>{https://qiita.com/TakahikoKawasaki/items/8f0e422c7edd2d220e06,IDトークンが分かれば OpenID Connect が分かる}
 
 === OpenID ConnectとFIDOのフローを確認してみよう
 さて、本題に入りたいと思います。
 OpenID ConnectとFIDOの関係を考えていく上で、まずはOpenID Connectがどのような流れで処理をされているのかを見てみましょう。
-@<img>{oidc}はOpenID Connectのフローの一つであるAuthorization Codeフローを簡単に書いたものになります。
+@<img>{oidc}はOpenID Connectのフローの一つであるAuthorization Codeフローを簡単に書いたものです。
 
 //image[oidc][Authorization Codeフロー]
 
-@<img>{oidc}はID連携を行いたいサービス(Relying Party)が、OpenId Providerの発行する認可用のAccess Tokenを使い、属性情報を取得するためのフローになります。
-@<br>{}このフローの中でも書かれていますがRelying Partyに認可コードを渡すための「ユーザー認証」を行っています。
+@<img>{oidc}はID連携を行いたいサービス(Relying Party)が、OpenId Providerの行った認証結果を得られる
+トークンであるID Tokenを発行し、それをもとに安全に属性情報をやり取りするためのフローになります。
+
+@<img>{oidc}でも書かれていますがRelying Partyに認可コードを渡すための「ユーザー認証」を行っています。
 OpenID Connectの使用説明の中にOPTIONですが認証方法(Authentication Methods References)について以下のような記述があります。
 
 //lead{
@@ -53,7 +59,7 @@ amr は大文字小文字を区別する文字列である.
 //}
 
 このように、OpenID Connectの仕様の中でも認証方法については仕様で細かく言及されていません。
-@<br>{}これは言い換えると、認証方法に関してはOpenId Providerの実装方法に委ねられているということが言えます。
+これは言い換えると、認証方法に関してはOpenId Providerの実装方法に委ねられているということが言えます。
 
 さて、ここでFIDO(WebAuthn)の認証フローを見てみましょう。
 
@@ -61,7 +67,7 @@ amr は大文字小文字を区別する文字列である.
 
 わざとらしく書いてますが、@<img>{fido}を見てみるとFIDOの仕様は認証だけで閉じています。
 @<br>{}ここで注目してほしいことは、FIDOは認証の仕様ということです。
-@<br>{}OpenID ConnectのAuthorization Codeフローでも書かれていた「ユーザー認証」の部分にFIDOをそっくりそのまま入れ込むことができます。
+そして、OpenID ConnectのAuthorization Codeフローでも書かれていた「ユーザー認証」の部分にFIDOをそっくりそのまま入れ込むことができます。
 これは、OPがFIDO対応の認証手段を持っていた場合にOpenID Connectのフローの中にFIDOを組み込むことが可能ということを示しています。
 OpenID ConnectのAuthorization CodeフローにFIDO(WebAuthn)のフローを追加したものが@<img>{fido_in_oidc}です。
 
@@ -84,10 +90,10 @@ Yahoo! JAPANのログインボタンを押すことでID連携がスタートし
 
 「次へ」ボタンが押された瞬間に裏側ではchallengeの要求が走り、サーバーからはchallengeを含んだ必要なoptionsが返却されます。
 そして、credentials.get()が叩かれ、ブラウザに対して認証命令を送ります。
-この認証命令がブラウザに送られ、認証器（今回の場合はAndroid内の認証器）が呼び出され、@<img>{yahoo_fido_3}のローカル認証として指紋が要求されています。
+この認証命令がブラウザに送られ、認証器（今回の場合はAndroid内の認証器）が呼び出され、@<img>{yahoo_fido_3}のローカル認証として指紋認証が要求されています。
 //image[yahoo_fido_3][FIDOの認証で指紋が要求される画面][scale=0.5]
 
-指紋認証に成功したら、サーバー側に対してassertionが送られ、署名されたデータをOpenId ProviderのFIDOサーバーに保存してある公開鍵で検証を行います。
+指紋認証に成功したら、サーバー側に対してassertionが送られ、署名されたデータをOpenId ProviderのFIDOサーバーに送り、保存してある公開鍵で検証を行います。
 
 ここで認証のフローは終わり、Token発行のフローに入ります。
 
@@ -97,9 +103,9 @@ Yahoo! JAPANのログインボタンを押すことでID連携がスタートし
 
 //image[yahoo_fido_4][RPに対してどのような属性情報を渡すのかの同意画面][scale=0.5]
 
-属性情報の同意が取れましたら、裏では@<img>{fido_in_oidc}のように各種Tokenが払い出され、Access Tokenを使用して属性情報を取得します。
-@<br>{}取得された属性情報はクロネコメンバーズの登録画面にプリセットされます。
-  モザイクばかりになってしまいましたが、@<img>{yahoo_fido_5}のように登録画面にOpenId Provider(Yahoo! JAPAN)に保存されていた属性情報が埋め込まれた登録画面が現れます。
+属性情報の同意が取れましたら、裏では@<img>{fido_in_oidc}のように認可コードが格好された後、各種Tokenが払い出され、Access Tokenを使用して属性情報を取得します。
+そして、取得された属性情報はヤマト運輸(Relying Party)に渡されます。
+モザイクばかりになってしまいましたが、処理が進むと@<img>{yahoo_fido_5}のように登録画面にOpenId Provider(Yahoo! JAPAN)に保存されていた属性情報が埋め込まれた登録画面が現れます。
 
 //image[yahoo_fido_5][RPの登録時に属性情報がプリセットされている画面][scale=0.7]
 
@@ -125,16 +131,16 @@ ID関連の仕様で使われているRPの元々の意味を「認証(本人検
 
 @<b>{OpenID Connectの場合}
 //lead{
-  ID連携を行いたいサービス（RP）がOpenId Providerに対して認証(本人検証)を委任している
+  ID連携を行いたいサービス（Relying Party）がOpenId Providerに対して認証(本人検証)を委任している
 //}
 @<b>{FIDOの場合}
 //lead{
-  ID Provider(RP)が認証器(Authenticator)に対して認証(本人検証)を委任している
+  ID Provider(Relying Party)が認証器(Authenticator)に対して認証(本人検証)を委任している
 //}
 という風に解釈できます。
 
 よくあるパスワードでのログインをする場合などにおいてID Providerが認証(本人確認)を委任することは基本的にはないのですが、
-FIDOの文脈ではID Providerが認証（本人確認）を認証器(Authenticator)に委任しています。
+FIDOの仕様ではID Providerが認証（本人確認）を認証器(Authenticator)に委任しています。
 
 そのためOpenID Connectの枠組みにFIDOを導入しようと思った場合、認証(本人確認)は@<img>{oidc-fido-rp}のように委任を繰り返します。
 //image[oidc-fido-rp][それぞれのRPの関係]
@@ -162,7 +168,8 @@ OpenID Connectの仕様の中にも認証をどうするかについて書かれ
 そうです。FIDO認証で使われている仕組みによく似ています。
 
 実際にサービスとして運用しているリクルートの仕組みでも端末側で鍵ペアを作成したり、
-公開鍵をサーバー上で管理したりなど、
+公開鍵をサーバー上で管理したり、PKCE(Proof Key for Code Exchange by OAuth Public Clients)
+を用いてチャレンジレスポンス方式を使いリプレイアタックを防いだりなど、
 大雑把な技術的な構成だけを考えたらFIDOとあまり変わらないことを行っています。
 
 もちろんパラメーターの渡し方などに関しては大きく違います。
@@ -174,9 +181,9 @@ OpenID Connectの仕様の中にも認証をどうするかについて書かれ
 まず、FIDOとSelf-issuedを考えるときは、技術的な視点ではなくFIDOやOpenID Connectの枠組みを考える必要があります。
 先程から何回か出ていますが、OpenID ConnectはID連携の仕様、FIDOは認証の仕様という感じにそれぞれの立場(レイヤー)が違います。
 
-Self-issuedはあくまでID連携から派生した仕様であり、基本的には認可トークンをどのように発行するかが重要で、認証はそのための手段です。
+Self-issuedはあくまでID連携から派生した仕様であり、基本的にはID Tokenや認可トークンをどのように発行するかが重要で、認証はそのための手段です。
 なので、Self-issuedを使いたい場合もOpenID Connectの枠組みなので本質としては属性情報をやり取りすることが目的になります。
-そのため、公開鍵暗号を使って認証を行っていますが、その情報自体は属性情報のやり取りの中に内包されて仕様ができています。
+そのため、公開鍵暗号を使って認証を行っていますが、その情報自体はトークンのやり取りの中に内包されて仕様ができています。
 
 一方FIDOは認証に特化しています。認証におけるエコシステムやフレームワークをFIDO Allianceが標準仕様を考えて導入を推し進めています。
 そのため、鍵ペアを作成し秘密鍵で署名を行う認証器についてや、サーバー側でのAttestationの検証方法に関しても厳密に仕様が決まっています。
@@ -188,9 +195,13 @@ Self-issuedはあくまでID連携から派生した仕様であり、基本的�
 だと思われます。
 
 私見になってしまいますが、実際にサービス導入を考えていく上では一長一短あると思います。
-厳密な認証注目したフレームワークやエコシステムの導入を考えている場合はFIDOを組み込むことを考えますし、
-OpenID Connectの仕様内の属性情報のやり取りの中で公開鍵暗号方式の認証を行いたい場合はSelf-issuedを導入することも考えると思います。
+厳密な認証に注目したフレームワークやエコシステムの導入を考えている場合はFIDOを組み込むことを考えますし、
+OpenID Connectの仕様内のトークンのやり取りの中で公開鍵暗号方式の認証を行いたい場合はSelf-issuedを導入することも考えられると思います。
 
+導入に際して考えるべきは技術的な優位性を考えるよりも、
+現状でどのような企業が導入を進めているかだったり、認定制度がどうなっているかだったり、
+ユーザー（この場合はエンドユーザーだけでなくOpenID ConnectでのRelying Partyも含む）に
+導入してもらえるのはどちらなのかなどの、マーケットの成熟度を考える必要があるかもしれません。
 
 == まとめ
 FIDOとOpenID Connectの関係性を中心にお話させていただきました。
