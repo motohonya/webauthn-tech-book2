@@ -1,6 +1,6 @@
 = ビットコインの技術で WebAuthn のデバイスロスに対抗する
 
-WebAuthn や FIDO はデバイスに紐づいた秘密鍵で、公開暗号を用いた認証を行うことでパスワード認証にくらべセキュアで簡単な認証を提供します。
+WebAuthn や FIDO はデバイスに紐づいた秘密鍵で、公開暗号を用いた認証を行うことでパスワード認証にくらべセキュアで簡単な認証を実現します。
 フィッシングに強く、PIN や生体認証でユーザーにも優しい（サーバーの実装はつらい？）素敵な技術です。
 
 …そう、リカバリーを除いては。
@@ -9,29 +9,32 @@ WebAuthn や FIDO はデバイスに紐づいた秘密鍵で、公開暗号を�
 全体的な流れとしては、なぜデバイスを紛失した際のアカウントのリカバリーが大変なのか、recovery Extension の概要、
 利用できそうなプロトコル、サンプルコードといった流れで解説します。
 
-私も今回解説するプロトコルについては、数カ月前に学んだばかりなので、楕円曲線暗号などに詳しくない方でもわかるように書いたつもりですが、
-もし質問等がございましたら、気軽に DM や Slack でご質問いただければと思います。
+実は著者自身、今回利用する楕円関数などのプロトコルについては詳しくなく、できるだけ詳細に書いたつもりですが、
+もし間違いや質問等がございましたら、気軽に DM や Slack でご質問いただければと思います。
 では、始めましょう。
 
 == デバイスロスについて
 
-WebAuthn では認証に用いる秘密鍵がデバイスに紐づき、デバイスの外には洩れないことにより安全性を担保しています。
+WebAuthn では認証に用いる秘密鍵がデバイス (Authenticator)  @<fn>{device_and_authenticator} に紐づき、デバイスの外には洩れないことにより安全性を担保しています。
 これはユーザーに対して「デバイスを持っていれば認証ができる」という画一的なユーザーエクスペリエンスを提供する一方、
 デバイスの紛失がすなわち認証情報の紛失となり、その無効化方法やリカバリー方法がひとつの課題となっています。
 
+//footnote[device_and_authenticator][デバイスと Authenticator はほぼ同義の言葉として使っています] 
+
 WebAuthn ではプライバシーを担保するために、それぞれのサービスの認証に、異なるキーペアを利用します。
 また Authenticator の ID などのひとつのキーを特定する識別子もありません。
-その為、登録時にユーザーがそれぞれの Authenticator に名前を付ける、あるいはスマートフォンの場合であればユーザーエージェントから名前を取り込むといった運用になるかと思います。
-例えば Google アカウントで新しく Authenticator を登録する際には、@<img>{w-google-seckeys}のように登録デバイスに名前をつけ、どのデバイスを登録したのかをユーザーが理解できるようにしています。
+その為、登録時にユーザーがそれぞれのデバイスに名前を付ける、あるいはスマートフォンの場合であればユーザーエージェントから名前を取り込むといった運用になるかと思います。
+例えば Google アカウントで新しくデバイスを登録する際には、@<img>{w-google-seckeys}のように登録デバイスに名前をつけ、どのデバイスを登録したのかをユーザーが理解できるようにしています。
 
-ユーザーがデバイスを紛失した際は、入力した名前などをもとに Authenticator を無効化するといった処理が可能かもしれませんが、単一のサービスではなく、複数のサービスに登録していた場合はどうでしょうか。
-ユーザーがデバイスを紛失してしまうと、なくしたデバイスがどのサービスで利用していたか、あるいは、登録した Authenticator のうち、なくしたデバイスはどれなのかを判断することは、ユーザーから判別することは難しくなります。
+ユーザーがデバイスを紛失した際は、入力した名前などをもとに無効化するといった処理が必要です。
+しかし無くしたデバイスを、単一のサービスではなく、複数のサービスに登録していた場合はどうでしょうか。
+ユーザーがデバイスを紛失してしまうと、なくしたデバイスがどのサービスで利用していたか、あるいは、登録したデバイスのうち、なくしたデバイスはどれなのかを判断することは、ユーザーから判別することは難しくなります。
 
 //image[w-google-seckeys][キーに名前を付けることは可能だが… *Googleのセキュリティーキー一覧画面より][scale=0.5]
 
 == アカウントリカバリーの方法
 
-ユーザーが登録した Authenticator や、サービスが分からなくなることよりも大きな問題があります。
+ユーザーが登録したデバイスや、サービスが分からなくなることよりも大きな問題があります。
 それはデバイスを紛失した際の、アカウントリカバリーの問題です。
 
 FIDO や WebAuthn において、デバイスロスの課題は、よくアカウントのリカバリー方法と共に語られます。
@@ -66,15 +69,15 @@ WebAuthn の GitHub issue 「Recovering from Device Loss」@<fn>{GitHubIssue} �
 
 WebAuthn のスペックには Extension と呼ばれる拡張データが定められています。
 例としては、認証情報に位置情報を含める Location Extension、認証メソッドを判別する User Verification Method Extension、あるいは U2F との互換性のために Client に実装されている FIDO AppID Extension などがあります。
-今回のドラフトでは、recovery Extension という名前の Extension が提案されています。
+今回の疑似スペックでは、recovery Extension が提案されています。
 これは Authenticator の登録時に、リカバリー用の Recovery Key の情報を Extension に含め、事前に CredentialId や、公開鍵をサーバーに送信し、
 紛失時にキーの再登録なしにリカバリーが可能になるというものです。
 
 主な登場人物は次のとおりです。
 
- * Recovery Key: リカバリー用の Authenticator です。事前に Main Key に登録しておきます。
- * Main Key: 普段利用している Authenticator で、今回紛失します。RP への登録処理時にリカバリーキーの情報も登録します。
- * RP: 認証を行うサービス提供者です。Main Key と Recovery Key の公開鍵を保存し、通常は Main Key で登録します。
+ * @<b>{Recovery Key}: リカバリー用の Authenticator です。事前に Main Key に登録しておきます。
+ * @<b>{Main Key}: 普段利用している Authenticator で、今回紛失します。RP への登録処理時にリカバリーキーの情報も登録します。
+ * @<b>{RP}: 認証を行うサービス提供者です。Main Key と Recovery Key の公開鍵を保存し、通常は Main Key で登録します。
 
 登録時の流れとしては、次のようになります。Main Key はすでに RP に登録されており、認証フローと同時に登録が行える仕様です。
 
@@ -139,11 +142,10 @@ device secret に対応する公開鍵だけでは、キーペアは当然作れ
 == HD ウォレットの仕組み
 
 Authenticator のバックアップが難しいことが分かりましたが、実は秘密鍵をバックアップ可能な Authenticator もあります。
-それは、Ledger や TREZOR といったビットコインフォレットです。
+それは、Ledger や TREZOR といったビットコインウォレットです。
 
 //image[w-ledger][Ledger Nano S * Ledger SAS. https://shop.ledger.com/ より引用][scale=0.5]
 
-#@# TODO キーの紹介
 ===[column]  Ledger Nano S の紹介
 
 Ledger Nano S は、HDウォレットを実装しているビットコインウォレットのひとつです。
@@ -196,6 +198,8 @@ HD ウォレットについて理解するには、少しばかり楕円曲線�
 @<img>{w-curve-add} を用いて説明すると、
 ある点 @<i>{P2} に @<i>{O} を加算した点を考えます。まず、無限遠点との交線である、@<i>{P2O}と交わる点、これはすなわち @<i>{P2'} = @<i>{P3}です。
 その対称な点は当然 @<i>{P2} ですので、 つまり @<i>{P2} + @<i>{O} = @<i>{P2} となります。
+
+//pagebreak
 
 最後に点の掛け算です。
 楕円曲線上の点について、スカラー倍は、曲線と点の接線を足し算同様に計算することで計算できます。
@@ -268,7 +272,15 @@ HD ウォレットの説明に入る前に、ふたつの関数を定義して�
 
 まずは秘密鍵同士の加算用関数です。
 秘密鍵はベースポイント @<i>{G} を何倍したか、という値でしたので単に整数として足すだけです。
-ただし、楕円曲線の位数（order）を超えてはいけないので curve.order の余剰を返します。入力チェックなどは省略しています。
+ただし、楕円曲線の位数（order）を超えてはいけないので curve.order の余剰を返します。実際の関数は @<list>{sample1} です。入力チェックなどは省略しています。
+
+次に公開鍵の加算用関数ですが、すでに ecdsa ライブラリの Point クラスで定義されているため、そちらを利用します。
+@<list>{sample3} は公開鍵 k1p の座標 p に p　を加算して新しい公開鍵を生成しています。
+ecdsa ライブラリの Point クラスには __add__ 関数がすでに定義されているので  p + p のように記述すれば大丈夫です。
+公開鍵の座標は VerifyingKey.pubkey.point で取得できます。
+座標から公開鍵へは ecdsa.VerifyingKey.from_public_point() を利用します。
+
+//pagebreak
 
 //listnum[sample1][秘密鍵の加算][python]{
 from math import log2
@@ -300,11 +312,6 @@ print(result == expect)
 //}
 
 
-次に公開鍵の加算用関数ですが、すでに ecdsa ライブラリの Point クラスで定義されているため、そちらを利用します。
-@<list>{sample3} は公開鍵 k1p の座標 p に p　を加算して新しい公開鍵を生成しています。
-ecdsa ライブラリの Point クラスには __add__ 関数がすでに定義されているので  p + p のように記述すれば大丈夫です。
-公開鍵の座標は VerifyingKey.pubkey.point で取得できます。
-座標から公開鍵へは ecdsa.VerifyingKey.from_public_point() を利用します。
 
 //listnum[sample3][公開鍵の加算][python]{
 k1 = bytes.fromhex(
@@ -405,7 +412,7 @@ print("m_ccode :", m_ccode.hex())
 生成した左半分を deltakey（秘密鍵） として、親秘密鍵と足し合わせます。
 足し合わせたものを、子秘密鍵 m@<sub>{0}prikey, HMAC-SHA512 の残り半分を、子チェーンコード m@<sub>{0}ccode として保存します。
 
-//image[w-key_generation_flow][子秘密鍵の作成]
+//image[w-key_generation_flow][子秘密鍵の作成][scale=0.8]
 
 //listnum[key_generation_flow][子秘密鍵の生成][python]{
 def deltakey_and_ccode(index, pubkey, ccode):
@@ -452,7 +459,7 @@ print("m_0_ccode :", m_0_ccode.hex())
 同様に子秘密鍵から、さらに子秘密鍵を作成することができ、まさに @<img>{w-hd} のように階層構造のキーペアを生成可能です。
 実際のフローは @<img>{w-cc_keygen_flow} となります。
 
-//image[w-cc_keygen_flow][子秘密鍵と子チェーンコードから、さらにキーを生成]
+//image[w-cc_keygen_flow][子秘密鍵と子チェーンコードから、さらにキーを生成][scale=0.8]
 
 //listnum[hd_authenticator_4][子秘密鍵の子を作成][python]{
 index = 1
@@ -511,6 +518,12 @@ m_{0/1}pubkey = m_0pubkey + m{0/1}deltakey * G
 実際のコードは @<list>{extended_pubkey} です。
 今回も（少しわかりにくいですが）全体のフロー図を、実際の値と共に載せていますので理解の助けにしてください。
 
+これで秘密鍵を利用せずに、公開鍵とチェーンコードから子公開鍵と子チェーンコードを生成する仕組みが理解できたと思います。
+実は HD ウォレットで利用する拡張公開鍵は、公開鍵とチェーンコードと index, depth, などをまとめて管理するフォーマットです。
+ただし、今回はあくまで WebAuthn の Extension として利用するだけなので、フォーマットには触れず、その仕組みだけを拝借します。
+
+//pagebreak
+
 //listnum[extended_pubkey][公開鍵とチェーンコードから子公開鍵を作成][python]{
 index = 1
 index = index.to_bytes(4, 'big')
@@ -532,16 +545,16 @@ print("m/0/1 ccode :", m_0_1_ccode.hex())
 # m/0/1 ccode : 6f14f270f19c7ac300f7fc5bbb6274ed974f36b4b5ecac60244a33d71a821043
 //}
 
-//image[w-extended_pubkey][公開鍵とチェーンコードから子公開鍵を作成するフロー]
-
-これで秘密鍵を利用せずに、公開鍵とチェーンコードから子公開鍵と子チェーンコードを生成する仕組みが理解できたと思います。
-実は HD ウォレットで利用する拡張公開鍵は、公開鍵とチェーンコードと index, depth, などをまとめて管理するフォーマットです。
-ただし、今回はあくまで WebAuthn の Extension として利用するだけなので、フォーマットには触れず、その仕組みだけを拝借します。
+//image[w-extended_pubkey][公開鍵とチェーンコードから子公開鍵を作成するフロー][scale=0.8]
 
 == バックアップ用 Authenticator の作成
 
 では実際に WebAuthn で利用できるバックアップ Authenticator を作成してみましょう。
 コードの全体は GitHub を参照ください。
+
+@<list>{hdkey} の HDKey クラスは Authenticator 内のキージェネレーターだと考えてください。
+HDKey は sign() メソッドと verify() メソッドがあり、署名と署名の検証が可能です。
+また HDウォレットのキー同様、HDKey 自身から階層的にキーペア（あるいは公開鍵）を生成可能です。今回は WebAuthn の recovery Extensions で利用できるように 3つの関数を定義しました。
 
 //listnum[hdkey][HD Authenticator のサンプルコード 重要な関数のみ抽出][python]{
 class HDKey(object):
@@ -578,12 +591,11 @@ class HDKey(object):
         return keyid_R == self._checksum(keyid_L, appid_hash=appid_hash)
 //}
 
-HDKey@<list>{hdkey} は Authenticator 内のキージェネレーターだと考えてください。
-HDKey は sign() メソッドと verify() メソッドがあり、署名と署名の検証が可能です。
+//image[w-hdkey_flow][HDKey クラスによる recovery フロー][scale=0.8]
 
-また HDウォレットのキー同様、HDKey 自身から階層的にキーペア（あるいは公開鍵）を生成可能です。今回は WebAuthn の recovery Extensions で利用できるように 3つの関数を定義しました。
+全体的な流れは @<img>{w-hdkey_flow} のようになります。
 
-pubkey_seed() は、マスターキーから pubkey_seed （公開鍵シード）を作成します。pubkey_seed は「秘密鍵は含まないが、その子公開鍵を生成できる」、HD ウォレットでいう拡張公開鍵です。
+pubkey_seed() は、マスターキーから pubkey_seed （公開鍵シード）を作成します。pubkey_seed は「秘密鍵は含まないが、その子公開鍵を生成できる」HD ウォレットでいう拡張公開鍵です。
 app_pubkey() は公開鍵シードから各アプリケーションごとの公開鍵を生成する関数です。引数には appid_hash を指定します。
 
 appid_hash は keyid と共に pubkey_seed のチェーンコードをキーとして HMAC を生成し、credentialID に含めて出力しています。credentialID に appid_hash を含めて HMAC をとった値が入っていることにより、
@@ -592,9 +604,6 @@ appid_hash は keyid と共に pubkey_seed のチェーンコードをキーと�
 最後に app_prikey() は WebAuthn の credentialID から、秘密鍵を含むアプリケーションごとの HDKey を生成します。
 この際引数に appid_hash を同時に渡すことで CredentialID が本当にこの HDKey で生成されたものかを判別します。
 
-全体的な流れは @<img>{w-hdkey_flow} のようになります。
-
-//image[w-hdkey_flow][HDKey クラスによる recovery フロー]
 
 === マスターキーの生成
 
@@ -628,6 +637,12 @@ master_key.print_debug()
 先ほど拡張公開鍵を作成したときと同じアルゴリズムで、チェーンコードを含む公開鍵を生成します。
 実際のコードは@<list>{pubkey_seed} です。
 
+先ほどの拡張公開鍵を作成した時と異なるのは、keyid というパラメータを生成している点です。
+keyid を生成する際には、まず、ランダムナンスを keyid の半分の長さで生成します。
+ここでは 128bit 長の nonce を生成しています。@<fn>{random} 
+次に、自身のチェーンコードを利用して nonce から hmac512 を計算し、その先頭 128bit をchecksum として返します。
+そして nonce と checksum を合成したものを keyid として返します。
+
 //listnum[pubkey_seed][Public Key seed の生成][python]{
 print("======== pubkey_seed ==========")
 pubkey_seed = master_key.pubkey_seed()
@@ -642,12 +657,6 @@ pubkey_seed.print_debug()
 # credid   : b66b0b6a66fce126869e3d5042169886a6e832e631350f356bad2f22d026ca62
 # ccode    : 0753795ad0c1be808005b008ee6f0d670641eb8c641cd1790cc4e3a0eb815be5
 //}
-
-先ほどの拡張公開鍵を作成した時と異なるのは、keyid というパラメータを生成している点です。
-keyid を生成する際には、まず、ランダムナンスを keyid の半分の長さで生成します。
-ここでは 128bit 長の nonce を生成しています。@<fn>{random} 
-次に、自身のチェーンコードを利用して nonce から hmac512 を計算し、その先頭 128bit をchecksum として返します。
-そして nonce と checksum を合成したものを keyid として返します。
 
 //footnote[random][ランダムナンスから keyid などを生成するので、ここからは毎回実行結果が変わります。]
 
@@ -667,12 +676,18 @@ class HDKey(object):
         return keyid_L + self._checksum(keyid_L, appid_hash)
 //}
 
-ここで生成した拡張公開鍵は、普段利用している Main Key に保存されます。
+ここで生成した拡張公開鍵は、普段利用している Main Key にリカバリー用のアプリケーション公開鍵を生成するために保存されます。
 
 === アプリケーションごとの公開鍵を作成
 
 Main Key は自身を RP に登録する際に、Recovery Key が利用する公開鍵（app_pubkey）を生成し、Extension に含む形でサーバーに送ります。
 @<list>{app_pubkey} は Main Key の内部で、登録時に行われるものだと考えてください。
+
+ここで、credid（WebAuthn の credentialID）は、親の Public Key seed の keyid に自身の keyid を合成したバイト配列です。
+先ほど 128bit の nonce と 128bit の checksum で 256bit の keyid を生成しました。したがって、credid はその 2 倍、512bit の長さになります。 
+
+マスターキーがもつ、秘密鍵とマスターチェーンコードがあれば、keyid から子秘密鍵を生成することが可能です。
+すなわち、credentialID があれば、マスターキーから Public Key seed に対応する秘密鍵が、そして app_pubkey に対応する秘密鍵も生成可能になります。
 
 //listnum[app_pubkey][アプリケーションごとの公開鍵を作成][python]{
 # Main Key の登録時に、リカバリー用のキーが利用予定の公開鍵を作成し、同時に RP に登録する。
@@ -695,11 +710,6 @@ app_pubkey.print_debug()
 # ccode    : 1a8872c6da749a52bc2f8a3eee8a30c7c985c2e8349185e0c226a32401dfc119
 //}
 
-ここで、credid（WebAuthn の credentialID）は、親の Public Key seed の keyid に自身の keyid を合成したバイト配列です。
-先ほど 128bit の nonce と 128bit の checksum で 256bit の keyid を生成しました。したがって、credid はその 2 倍、512bit の長さになります。 
-
-マスターキーがもつ、秘密鍵とマスターチェーンコードがあれば、keyid から子秘密鍵を生成することが可能です。
-すなわち、credentialID があれば、マスターキーから Public Key seed に対応する秘密鍵が、そして app_pubkey に対応する秘密鍵も生成可能になります。
 
 === CredentialID から秘密鍵を復元
 
@@ -771,6 +781,12 @@ result = app_pubkey.verify(sign, source)
 では、最後に署名を生成し検証してみます。
 ここで、公開鍵である app_pubkey は RP に、先ほど生成した app_prikey はリカバリー用のキー内部にあると考えてください。
 
+@<list>{verifying} では、'nonce' という文字列に対し、app_prikey で署名を行っています。
+なお、ドラフトでは authenticatorData から、Extensions を除いたものと、clientDataHash を結合したものに対して署名を行っていますが、今回はあくまでコンセプトの説明ですので単純な文字列に対して署名を行いました。
+同様に state パラメーターについても省略しています。
+
+最後の検証では、サーバーに保存されている pubkey を利用して署名を検証できていることが分かります。
+
 //listnum[verifying][署名の作成と検証][python]{
 source = 'nonce'.encode()
 sign = prikey.sign(source)
@@ -789,12 +805,6 @@ print('result:', result)
 # sign  : bd5e8f09f821240db155ca35935f022e852cd7d06093f62...
 # result: True
 //}
-
-@<list>{verifying} では、'nonce' という文字列に対し、app_prikey で署名を行っています。
-なお、ドラフトでは authenticatorData から、Extensions を除いたものと、clientDataHash を結合したものに対して署名を行っていますが、今回はあくまでコンセプトの説明ですので単純な文字列に対して署名を行いました。
-同様に state パラメーターについても省略しています。
-
-最後の検証では、サーバーに保存されている pubkey を利用して署名を検証できていることが分かります。
 
 このように、リカバリー用のキーは自身が生成する署名用の秘密鍵に対応する公開鍵を、秘密の情報は共有せずに RP と共有することができました。
 また、その秘密鍵を、RP から送られてくる credentialID から復元することができました。
