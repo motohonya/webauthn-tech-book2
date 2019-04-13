@@ -139,12 +139,13 @@ device secret に対応する公開鍵だけでは、キーペアは当然作れ
 == HD ウォレットの仕組み
 
 Authenticator のバックアップが難しいことが分かりましたが、実は秘密鍵をバックアップ可能な Authenticator もあります。
-それは、Ledger や TREZOR といったビットコインフォレットがです。
+それは、Ledger や TREZOR といったビットコインフォレットです。
 
 //image[w-ledger][Ledger Nano S * Ledger SAS. https://shop.ledger.com/ より引用][scale=0.5]
 
 #@# TODO キーの紹介
 ===[column]  Ledger Nano S の紹介
+
 Ledger Nano S は、HDウォレットを実装しているビットコインウォレットのひとつです。
 ビットコインやイーサリアムといった仮想通貨のウォレットとしてだけではなく、FIDO U2F のキーとしても動作します。
 面白いことに、HDウォレットの仕組みから、ある seed をもとにビットコインに利用するキーペアのリストアが可能です。
@@ -152,6 +153,7 @@ U2F のキーについても、 seed さえ忘れなければ同じキーが復�
 これは FIDO の Authenticator としてみた場合にも、とても面白い仕組みです。（安全性に関する議論はここでは触れません。）
 
 本作を書くにあたり、この HD ウォレットの仕組みが非常に参考になりました。
+
 ===[/column]
 
 結論からいうと、この HD ウォレットの仕組みが Authenticator のリカバリープロトコルに利用できると考えています。
@@ -397,11 +399,11 @@ print("m_ccode :", m_ccode.hex())
 子秘密鍵は親秘密鍵と、親チェーンコードから作られます。
 今回は m_key（b681...）と m_ccode（39c7...）から作ります。
 
-まず m_key の公開鍵 m_pubkey を計算します。これは m_key.get_verifying_key().to_string() で求められます。
+まず m_key の公開鍵 m_pubkey を計算します。これは m_key.get_verifying_key() で求められます。
 次に index を作成します。バイト配列にする必要があるので、なんとなく 4bytes になるよう x0000 を作成します。
 そして公開鍵 m_pubkey と index を結合し、結合したものを seed, 親チェーンコード m_ccode を key として HMAC-SHA512 を計算します。
 生成した左半分を deltakey（秘密鍵） として、親秘密鍵と足し合わせます。
-足し合わせたものを、子秘密鍵 m_0_prikey, HMAC-SHA512 の残り半分を、子チェーンコード m_0_ccode として保存します。
+足し合わせたものを、子秘密鍵 m@<sub>{0}prikey, HMAC-SHA512 の残り半分を、子チェーンコード m@<sub>{0}ccode として保存します。
 
 //image[w-key_generation_flow][子秘密鍵の作成]
 
@@ -477,25 +479,25 @@ print("m/0/1 ccode :", m_0_1_ccode.hex())
 実は秘密鍵がなくとも、子公開鍵であれば生成可能です。
 実際に計算してみましょう。
 
-@<b>{m_0_pubkey} と @<b>{m_0_ccode} から @<b>{m_0_1_pubkey} と @<b>{m_0_1_ccode} を生成します。
+m@<sub>{0}pubkeyと m@<sub>{0}ccode から m@<sub>{0/1}pubkey と m@<sub>{0/1}ccode を生成します。
 
-まず、@<b>{m_0_1_ccode} は簡単です。そもそも m_0_pubkey と index を連結したものを seed に、 m_0_ccode を key として HMAC-SHA512 をとったものが @<b>{deltakey} と @<b>{m_0_1_ccode} でした。
-次に注目すべきは、m_0_1_pubkey が m_0_1_deltakey と m_0_prikey を加算した m_0_1_prikey の公開鍵である点です。
+まず、m@<sub>{0/1}ccode は簡単です。そもそも m@<sub>{0}pubkey と index を連結したものを seed に、 m@<sub>{0}ccode を key として HMAC-SHA512 をとったものが deltakey と m@<sub>{0/1}ccode でした。
+次に注目すべきは、m@<sub>{0/1}pubkey が m@<sub>{0/1}deltakey と m@<sub>{0}prikey を加算した m@<sub>{0/1}prikey の公開鍵である点です。
 
-@<list>{sample3} で解説したとおり、楕円曲線暗号では k1*@<i>{G} + k2*@<i>{G} = (k1 + k2)*@<i>{G} が成り立ちます。
-ここでは秘密鍵 m_0_1_prikey と m_0_1_deltakey を加算したものが m_0_1_prikey ですから、次の式が成り立ちます。@<fn>{add_point} 
+@<list>{sample3} で解説したとおり、楕円曲線暗号では @<m>{k1*G + k2*G = (k1 + k2)*G }が成り立ちます。
+ここでは秘密鍵 m@<sub>{0/1}prikey と m@<sub>{0/1}deltakey の和が m@<sub>{0/1}prikey ですから、次の式が成り立ちます。@<fn>{add_point} 
 
 
 //texequation{
 m_0prikey*G+m_{0/1}deltakey*G = m_{0/1}prikey*G = m_{0/1}pubkey
 //}
 
-
 ここで
 
 //texequation{
 m_0prikey*G = m_0pubkey
-//} 
+//}
+
 ですから、
 
 //texequation{
