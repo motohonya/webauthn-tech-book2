@@ -141,9 +141,9 @@ device secret に対応する公開鍵だけでは、キーペアは当然作れ
 == HD ウォレットの仕組み
 
 Authenticator のバックアップが難しいことが分かりましたが、実は秘密鍵をバックアップ可能な Authenticator もあります。
-それは、Ledger や TREZOR といったビットコインウォレットです。
+それは、@<href>{https://www.ledger.com/,Ledger} や @<href>{https://trezor.io/,Ledger} といったビットコインウォレットです。
 
-//image[w-ledger][Ledger Nano S * Ledger SAS. https://shop.ledger.com/ より引用][scale=0.5]
+//image[w-ledger][Ledger Nano S][scale=0.8]
 
 ===[column]  Ledger Nano S の紹介
 
@@ -171,7 +171,7 @@ HD ウォレットは Hierarchical Deterministic（階層的決定性）ウォ�
 
 //footnote[BIP0032][https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki]
 
-//footnote[hierarchical][bitcoin ウォレットのプロトコルでは、マスターキーを @<i>{m} ,そこの子を @<i>{m/x}, その子を @<i>{m/x/y} と呼ぶため、本書でもそのように呼称します。]
+//footnote[hierarchical][bitcoin ウォレットのプロトコルでは、マスターキーを @<i>{m} ,そこの子を @<i>{m/x}, その子を @<i>{m/x/y} と表記します]
 
 
 === 楕円曲線暗号の数学的性質
