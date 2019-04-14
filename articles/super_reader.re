@@ -1,4 +1,4 @@
-= FIDOとOpenID Connecctの関係性について
+= FIDOとOpenID Connectの関係性について
 
 こんにちは@super_readerです。普段は認証やID連携のことをやっており、その中でも主にFIDO(特にWebAuthn)を扱っているWebエンジニアです。
 
