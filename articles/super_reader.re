@@ -83,13 +83,13 @@ Yahoo!ID連携の画面フローをもとにどのような処理が行われて
 今回は具体例としてヤマト運輸のクロネコメンバーズの会員登録を進めるまでの過程を見てみましょう。
 @<br>{}@<img>{yahoo_fido_1}はクロネコメンバーズのログイン画面です。
 Yahoo! JAPANのログインボタンを押すことでID連携がスタートします。
-//image[yahoo_fido_1][RPのID連携ボタンがある画面][scale=0.5]
+//image[yahoo_fido_1][RPのID連携ボタンがある画面 @<href>{https://cmypage.kuronekoyamato.co.jp/portal/custtempregpage, クロネコメンバーズ ページより}][scale=0.5]
 
 まずはOpenId Provider側の認証を行う必要があります。@<img>{yahoo_fido_2}はOpenId ProviderであるYahoo! JAPANのログイン画面です。
 未ログイン状態からログインするためにIDを入力して「次へ」ボタンを押します。
 ここで使用するアカウントはすでにWebAuthnでの登録フローが完了しているアカウントになります。
 (すでにYahoo! JAPANI IDでログイン済みのブラウザを使っている場合はIDを入力する必要はなく、そのまま@<img>{yahoo_fido_3}に飛びます)
-//image[yahoo_fido_2][OpenId Providerのログイン画面][scale=0.5]
+//image[yahoo_fido_2][OpenId Providerのログイン画面 @<href>{https://login.yahoo.co.jp, login.yahoo.co.jp より}][scale=0.5]
 
 「次へ」ボタンが押された瞬間に裏側ではchallengeの要求が走り、サーバーからはchallengeを含んだ必要なoptionsが返却されます。
 そして、credentials.get()が叩かれ、ブラウザに対して認証命令を送ります。
