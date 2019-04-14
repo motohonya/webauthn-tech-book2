@@ -13,9 +13,7 @@ SPA やアプリケーションをバリバリ仕事で書いているので、�
 //footnote[webauthn4j][https://github.com/webauthn4j/webauthn4j]
 
 ==== すぱりだ / @super_reader
-
-赤い ID の会社で FIDO やってる強い人。FIDO の歴史についても詳しい。
-OpenID Connect に関して強い後輩に、レビューしてもらったところボコボコにされたと嘆いていた。
+とあるIdPでFIDO関連(特にWebAuthn)のことをやっている人。ふと振り返るとまぁまぁな年数FIDOに関わっていた。ID連携や認証の知識に強い歴戦の猛者が周りに多すぎて日々勉強不足に悩まされている。
 
 ==== watahani / @watahani
 
