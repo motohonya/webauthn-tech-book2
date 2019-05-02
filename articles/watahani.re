@@ -9,7 +9,7 @@ WebAuthn や FIDO はデバイスに紐づいた秘密鍵で、公開暗号を�
 全体的な流れとしては、なぜデバイスを紛失した際のアカウントのリカバリーが大変なのか、recovery Extension の概要、
 利用できそうなプロトコル、サンプルコードといった流れで解説します。
 
-実は著者自身、今回利用する楕円関数などのプロトコルについては詳しくなく、できるだけ詳細に書いたつもりですが、
+実は著者自身、今回利用する楕円関数などの技術については詳しくなく、できるだけ詳細に書いたつもりですが、
 もし間違いや質問等がございましたら、気軽に DM や Slack でご質問いただければと思います。
 では、始めましょう。
 
@@ -141,7 +141,7 @@ device secret に対応する公開鍵だけでは、キーペアは当然作れ
 == HD ウォレットの仕組み
 
 Authenticator のバックアップが難しいことが分かりましたが、実は秘密鍵をバックアップ可能な Authenticator もあります。
-それは、@<href>{https://www.ledger.com/,Ledger} や @<href>{https://trezor.io/,Ledger} といったビットコインウォレットです。
+それは、@<href>{https://www.ledger.com/,Ledger} や @<href>{https://trezor.io/,TREZOR} といったビットコインウォレットです。
 
 //image[w-ledger][Ledger Nano S][scale=0.8]
 
@@ -482,7 +482,7 @@ print("m/0/1 ccode :", m_0_1_ccode.hex())
 今回、HDウォレットを解説したのは「秘密鍵がなくても、アプリケーションごとの公開鍵を生成できる」仕組みを知るためでした。
 では @<img>{w-cc_keygen_flow} から秘密鍵を取り除くとどうなるでしょうか？
 
-実は秘密鍵がなくとも、子公開鍵であれば生成可能です。
+実は秘密鍵がなくとも、マスター公開鍵とマスターチェーンコードがであれば、子公開鍵が生成可能です。
 実際に計算してみましょう。
 
 m@<sub>{0}pubkeyと m@<sub>{0}ccode から m@<sub>{0/1}pubkey と m@<sub>{0/1}ccode を生成します。
@@ -491,7 +491,7 @@ m@<sub>{0}pubkeyと m@<sub>{0}ccode から m@<sub>{0/1}pubkey と m@<sub>{0/1}cc
 次に注目すべきは、m@<sub>{0/1}pubkey が m@<sub>{0/1}deltakey と m@<sub>{0}prikey を加算した m@<sub>{0/1}prikey の公開鍵である点です。
 
 @<list>{sample3} で解説したとおり、楕円曲線暗号では @<m>{k1*G + k2*G = (k1 + k2)*G }が成り立ちます。
-ここでは秘密鍵 m@<sub>{0/1}prikey と m@<sub>{0/1}deltakey の和が m@<sub>{0/1}prikey ですから、次の式が成り立ちます。@<fn>{add_point} 
+ここでは秘密鍵 m@<sub>{0}prikey と m@<sub>{0/1}deltakey の和が m@<sub>{0/1}prikey ですから、次の式が成り立ちます。@<fn>{add_point} 
 
 
 //texequation{
